@@ -847,6 +847,7 @@
 
         const statusCell = $('status-'+idx);
         if(statusCell){
+          // Create the Add & Use UI
           statusCell.innerHTML = '<div style="margin-top:6px"><label class="small">Replacing which required item?</label><select id="replaceReq-'+idx+'"><option value="">(select)</option></select></div><div style="margin-top:8px"><button id="addUse-'+idx+'" class="btn small">Add & Use</button></div>';
           const replaceSel = $('replaceReq-'+idx);
           if(replaceSel){
@@ -868,62 +869,67 @@
               if (cat && $('catinp-'+idx)) $('catinp-'+idx).value = cat;
             });
           }
-          document.addEventListener('click', function onAddUse(ev){
-            if(ev.target && ev.target.id === 'addUse-'+idx){
+
+          // Attach click handler directly to the Add & Use button with {once:true} to ensure single execution
+          const addUseBtn = document.getElementById('addUse-'+idx);
+          if (addUseBtn) {
+            addUseBtn.addEventListener('click', function onClick(ev) {
               ev.preventDefault();
-              const addUseBtn = ev.target;
-              disableButton(addUseBtn, () => {
-                return new Promise((resolve) => {
-                  const newName = (document.getElementById('nameinp-'+idx) && document.getElementById('nameinp-'+idx).value || '').trim();
-                  const newLot = (document.getElementById('lotinp-'+idx) && document.getElementById('lotinp-'+idx).value || '').trim();
-                  const newExp = (document.getElementById('expinp-'+idx) && document.getElementById('expinp-'+idx).value || '').trim();
-                  const replaceTarget = (document.getElementById('replaceReq-'+idx) && document.getElementById('replaceReq-'+idx).value || '').trim();
-                  const categoryChosen = (document.getElementById('catinp-'+idx) && document.getElementById('catinp-'+idx).value || '').trim();
-                  const invQtyVal = Number(document.getElementById('invqty-'+idx).value || 1);
-                  const bagQtyVal = Number(document.getElementById('bagqty-'+idx).value || 1);
-                  if(!newName){ alert('Item name required'); resolve(); return; }
-                  if(!replaceTarget){ alert('Choose required item replaced'); resolve(); return; }
-                  const barcodeToSend = document.getElementById('scan-'+idx).dataset.scannedBarcode || '';
-                  const payload = { name:newName, barcode: barcodeToSend, lot:newLot, exp:newExp, qty: invQtyVal, category: categoryChosen || '' };
-                  jsonpCall('createItem', payload, function(res){
-                    if(!res || res.success===false){
-                      alert((res && res.message) ? res.message : 'Create failed');
-                      resolve();
-                      return;
-                    }
-                    const inp = document.getElementById('scan-'+idx);
-                    if(inp){
-                      inp.dataset.row = res.stockRow || '';
-                      inp.dataset.name = newName;
-                      inp.dataset.lot = newLot;
-                      inp.dataset.exp = res.exp || newExp || '';
-                      if(payload.barcode) inp.dataset.barcode = payload.barcode;
-                    }
-                    const finalExp = res.exp || newExp;
-                    const newStatus = computeStatusFromExp(finalExp);
-                    const statusInput = document.getElementById('statusinp-'+idx);
-                    if(statusInput) statusInput.value = newStatus;
+              // Disable the button to prevent further clicks (even though once removes it, this adds visual feedback)
+              addUseBtn.disabled = true;
+              const originalText = addUseBtn.textContent;
+              addUseBtn.textContent = '...';
 
-                    const invField = document.getElementById('invqty-'+idx);
-                    if(invField) {
-                      invField.disabled = true;
-                      invField.classList.remove('invqty-field');
-                    }
-                    const catField = document.getElementById('catinp-'+idx);
-                    if(catField) catField.disabled = true;
+              const newName = (document.getElementById('nameinp-'+idx) && document.getElementById('nameinp-'+idx).value || '').trim();
+              const newLot = (document.getElementById('lotinp-'+idx) && document.getElementById('lotinp-'+idx).value || '').trim();
+              const newExp = (document.getElementById('expinp-'+idx) && document.getElementById('expinp-'+idx).value || '').trim();
+              const replaceTarget = (document.getElementById('replaceReq-'+idx) && document.getElementById('replaceReq-'+idx).value || '').trim();
+              const categoryChosen = (document.getElementById('catinp-'+idx) && document.getElementById('catinp-'+idx).value || '').trim();
+              const invQtyVal = Number(document.getElementById('invqty-'+idx).value || 1);
+              const bagQtyVal = Number(document.getElementById('bagqty-'+idx).value || 1);
+              if(!newName){ alert('Item name required'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
+              if(!replaceTarget){ alert('Choose required item replaced'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
+              const barcodeToSend = document.getElementById('scan-'+idx).dataset.scannedBarcode || '';
+              const payload = { name:newName, barcode: barcodeToSend, lot:newLot, exp:newExp, qty: invQtyVal, category: categoryChosen || '' };
+              jsonpCall('createItem', payload, function(res){
+                if(!res || res.success===false){
+                  alert((res && res.message) ? res.message : 'Create failed');
+                  addUseBtn.disabled = false;
+                  addUseBtn.textContent = originalText;
+                  return;
+                }
+                const inp = document.getElementById('scan-'+idx);
+                if(inp){
+                  inp.dataset.row = res.stockRow || '';
+                  inp.dataset.name = newName;
+                  inp.dataset.lot = newLot;
+                  inp.dataset.exp = res.exp || newExp || '';
+                  if(payload.barcode) inp.dataset.barcode = payload.barcode;
+                }
+                const finalExp = res.exp || newExp;
+                const newStatus = computeStatusFromExp(finalExp);
+                const statusInput = document.getElementById('statusinp-'+idx);
+                if(statusInput) statusInput.value = newStatus;
 
-                    const statusCellNow = document.getElementById('status-'+idx);
-                    if(statusCellNow) statusCellNow.innerHTML = '<input id="statusinp-'+idx+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" value="' + newStatus + '" disabled />';
-                    const m = document.getElementById('matches-'+idx); if(m) m.innerHTML = '';
-                    maybeAddRow();
-                    refreshAll(); // refresh everything after sync
-                    resolve();
-                  });
-                });
+                const invField = document.getElementById('invqty-'+idx);
+                if(invField) {
+                  invField.disabled = true;
+                  invField.classList.remove('invqty-field');
+                }
+                const catField = document.getElementById('catinp-'+idx);
+                if(catField) catField.disabled = true;
+
+                // Replace the status cell with a disabled input showing the new status
+                const statusCellNow = document.getElementById('status-'+idx);
+                if(statusCellNow) statusCellNow.innerHTML = '<input id="statusinp-'+idx+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" value="' + newStatus + '" disabled />';
+
+                const m = document.getElementById('matches-'+idx); if(m) m.innerHTML = '';
+                maybeAddRow();
+                // Refresh only dashboard data, not the restock table
+                loadDashboardData();
               });
-              document.removeEventListener('click', onAddUse);
-            }
-          });
+            }, { once: true }); // ensures the listener is removed after first click
+          }
         }
       }
 
