@@ -1,0 +1,1013 @@
+<!doctype html>
+<html>
+   <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width,initial-scale=1" />
+      <title>ALS Inventory — Web App v1.80</title>
+      <!-- Google Identity Services -->
+      <script src="https://accounts.google.com/gsi/client" async defer></script>
+      <style>
+        :root{
+          --primary:#0b5fff; --on-primary:#fff; --muted:#6b7280; --card:#fff; --border:#e6e9ee; --radius:10px;
+          font-family:Segoe UI,Roboto,Arial; font-size:15px;
+        }
+        body{margin:0;background:#fff;color:#0f172a}
+        .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+        .brand{display:flex;align-items:center;gap:12px}
+        .brand img{height:48px}
+        .btn{background:var(--primary);color:var(--on-primary);border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700}
+        .btn.secondary{background:#374151}
+        .btn.small{padding:6px 8px;font-size:14px;border-radius:6px}
+        .wrap{max-width:1200px;margin:18px auto;padding:12px;display:grid;grid-template-columns:1fr;gap:18px}
+        .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+        input,select{width:100%;padding:9px;border-radius:8px;border:1px solid var(--border)}
+        input:disabled, select:disabled { background:#f3f6fb; color:#4b5563; cursor:not-allowed; }
+        .small{font-size:13px;color:var(--muted)}
+        .tableWrap{overflow:auto;border-radius:8px;border:1px solid var(--border);background:#fff;margin-top:8px;padding:8px}
+        table{width:100%;border-collapse:collapse;min-width:780px}
+        thead th{background:#f3f6fb;padding:10px;text-align:left;position:sticky;top:0;z-index:1}
+        th,td{padding:10px;border-bottom:1px solid #eef0f4;vertical-align:top}
+        .cameraBtn{background:#f3f6fb;border:1px solid var(--border);padding:8px;border-radius:8px;cursor:pointer}
+        .readerContainer{margin-top:8px;display:none;position:relative}
+        .readerContainer.active{display:block}
+        .scannerBox{width:100%;max-width:720px;height:auto;border-radius:8px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center}
+        video.scannerVideo{width:100%;height:auto;max-height:420px;object-fit:cover}
+        .closeCam{position:absolute;right:8px;top:8px;background:rgba(0,0,0,0.55);color:#fff;border:none;padding:6px;border-radius:6px;cursor:pointer}
+        .statusMsg{margin-top:8px;font-size:13px;color:var(--muted)}
+        .matchList{border:1px solid var(--border);border-radius:8px;max-height:260px;overflow:auto;margin-top:8px;background:#fff}
+        .matchItem{padding:8px 10px;border-bottom:1px solid #f3f6fb;display:flex;justify-content:space-between;align-items:center}
+        .mutedText{color:var(--muted); font-size:13px}
+        /* Instruction boxes */
+        .instruction{background:#f0f7ff;border-left:4px solid var(--primary);padding:10px;margin:10px 0;border-radius:0 8px 8px 0;}
+        .instruction p{margin:5px 0;}
+
+        /* Filter row – professional appearance */
+        .filter-row {
+          display:flex;
+          gap:24px;
+          margin:16px 0;
+          padding:12px 16px;
+          background:#f9fafc;
+          border-radius:10px;
+          border:1px solid var(--border);
+          align-items:center;
+        }
+        .filter-row label {
+          display:flex;
+          align-items:center;
+          gap:8px;
+          font-weight:500;
+          color:#1e293b;
+        }
+
+        /* Restock table */
+        #bagCard .tableWrap table thead th { white-space:nowrap; }
+        #bagCard .tableWrap td .scanWrap { display:flex; gap:6px; align-items:center; }
+        #bagCard .tableWrap td .scanWrap input { flex:1; min-width:0; padding:8px; }
+        #bagCard .tableWrap td input[type="number"] { width:84px; }
+
+        /* Hide Inv Qty and Category cells by default – shown dynamically */
+        .invqty-field, .cat-field-hidden { display:none; }
+
+        /* Mobile responsiveness */
+        @media (max-width:700px) {
+          #bagCard .tableWrap table thead { display:none; }
+          #bagCard .tableWrap table tbody tr {
+            display:block;
+            border:1px solid var(--border);
+            margin-bottom:12px;
+            padding:10px;
+            border-radius:8px;
+            background:#fff;
+          }
+          #bagCard .tableWrap td {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:8px 0;
+            border-bottom:none;
+          }
+          #bagCard .tableWrap td:before {
+            content: attr(data-label);
+            display:inline-block;
+            width:42%;
+            min-width:110px;
+            font-weight:700;
+            color:var(--muted);
+            margin-right:10px;
+            font-size:14px;
+          }
+          #bagCard .tableWrap td input,
+          #bagCard .tableWrap td select,
+          #bagCard .tableWrap td .scanWrap input {
+            width:100%;
+            box-sizing:border-box;
+            padding:10px;
+            font-size:16px;
+            min-height:42px;
+            border-radius:8px;
+            border:1px solid var(--border);
+          }
+          #bagCard .tableWrap td .scanWrap {
+            display:flex;
+            gap:8px;
+            align-items:center;
+            width:100%;
+          }
+          #bagCard .tableWrap td .cameraBtn,
+          #bagCard .tableWrap td .btn.small,
+          #bagCard .tableWrap td button {
+            flex:0 0 auto;
+            padding:8px 10px;
+            font-size:15px;
+          }
+          #bagCard .tableWrap td[data-label="Inv Qty"] input[type="number"],
+          #bagCard .tableWrap td[data-label="Bag Qty"] input[type="number"] {
+            width:120px;
+          }
+          .scannerBox { max-width:100%; }
+          #bagCard .tableWrap td .scanWrap input { min-width:0; }
+        }
+
+        .rowScannerContainer {
+          border:1px solid var(--border);
+          border-radius:8px;
+          padding:10px;
+          margin-top:8px;
+          background:#fff;
+        }
+
+        .signedInWrap { display:flex; align-items:center; gap:8px; }
+        .signedInWrap .smallBtn { background:transparent; border:1px solid var(--border); padding:6px 8px; border-radius:6px; cursor:pointer; color:var(--muted); }
+      </style>
+   </head>
+   <body>
+      <div class="topbar">
+         <div class="brand">
+            <img src="https://images.squarespace-cdn.com/content/v1/562e914be4b07324c716280e/1445893787747-ZY45YJQ73Y5V4688H3SD/Citywide%5BNew%5D.gif?format=1000w" alt="logo">
+            <div>
+               <div style="font-weight:800">ALS Inventory — Web App v1.80</div>
+               <div class="small signedInWrap">
+                 Signed in as: <span id="currentUser">...</span>
+                 <div id="btnSignIn"></div>
+                 <button id="btnSignOut" class="btn secondary small" title="Sign out">Sign Out</button>
+               </div>
+            </div>
+         </div>
+         <div style="display:flex;gap:8px;align-items:center">
+            <button id="btnDashboard" class="btn">Dashboard</button>
+            <button id="btnCreate" class="btn">Create Item</button>
+            <button id="btnRestock" class="btn">ALS Bag Restock</button>
+            <button id="btnRefresh" class="btn secondary">Refresh</button>
+         </div>
+      </div>
+      <div class="wrap">
+         <!-- Dashboard -->
+         <div id="dashboardCard" class="card" style="display:block">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+               <h3 style="margin:0">Dashboard</h3>
+               <div>
+                  <label class="small">
+                     View:
+                     <select id="dashboardViewSelect">
+                        <option value="items">Items</option>
+                        <option value="bags">Bags (select one)</option>
+                     </select>
+                  </label>
+               </div>
+            </div>
+            <!-- Professional filter row -->
+            <div class="filter-row">
+               <label><input type="checkbox" id="hideExpired" checked> Exclude expired items</label>
+               <label><input type="checkbox" id="hideOutOfStock"> Exclude out of stock items</label>
+            </div>
+            <div id="bagSelectorWrap" style="margin-top:8px;display:none"> <label>Select Bag</label> <select id="dashboardBagSelect"></select> </div>
+            <div class="tableWrap" style="margin-top:12px">
+               <table>
+                  <thead id="dashboardHead">
+                     <tr></tr>
+                  </thead>
+                  <tbody id="dashboardBody">
+                     <tr>
+                        <td class="small">Loading...</td>
+                     </tr>
+                  </tbody>
+               </table>
+            </div>
+         </div>
+
+         <!-- Create -->
+         <div id="createCard" class="card" style="display:none">
+            <h3>Create Inventory Item</h3>
+            <div class="instruction">
+               <p><strong>How to add a new item:</strong> Select a category, enter the item name, scan or type the barcode (if available), type the lot number, choose an expiration date, and enter the quantity you are adding to stock. Then click <strong>Save item</strong>.</p>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+               <div>
+                  <label>Category</label>
+                  <select id="createCategory">
+                     <option value="">-- none --</option>
+                  </select>
+               </div>
+               <div>
+                  <label>Item name (select or type)</label> <input id="createItemName" list="reqList" placeholder="Type or choose" />
+                  <datalist id="reqList"></datalist>
+               </div>
+               <div>
+                  <label>Barcode</label>
+                  <div style="display:flex;gap:8px"> <input id="createBarcode" placeholder="Scan or type barcode" /> <button id="createCameraBtn" class="cameraBtn">📷</button> </div>
+                  <div id="createScanner" class="readerContainer">
+                     <div class="scannerBox" id="createScannerBox">
+                        <div style="color:#fff">Camera preview</div>
+                     </div>
+                     <button class="closeCam" id="createCloseCam" style="display:none">✕</button>
+                     <div id="createScannerStatus" class="statusMsg"></div>
+                  </div>
+               </div>
+               <div><label>Lot number</label><input id="createLot" placeholder="Lot number" /></div>
+               <div><label>Expiration</label><input id="createExp" type="date" /></div>
+               <div><label>Quantity</label><input id="createQty" type="number" min="0" value="1" /></div>
+            </div>
+            <div style="margin-top:12px"> <button id="createSave" class="btn">Save item</button> <button id="createClear" class="btn secondary">Clear</button> </div>
+         </div>
+
+         <!-- Restock -->
+         <div id="bagCard" class="card" style="display:none">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+               <h3>ALS Bag Restock</h3>
+               <div class="small">Scan items, enter quantities, submit</div>
+            </div>
+            <div class="instruction">
+               <p><strong>Instructions:</strong>
+               <br>• <strong>First, select a bag number</strong> from the dropdown above the table.
+               <br>• Scan or type a barcode/lot number/item name in the first column.
+               <br>• If the item exists, fields auto‑fill; just enter the <strong>Bag Qty</strong> (how many go into the bag). Category and Status are read‑only.
+               <br>• If the item is <strong>not found</strong>, an <strong>Inv Qty</strong> field appears. Enter the total quantity you are adding to stock, fill in all details, choose which required item it replaces, then click <strong>Add & Use</strong>. The item is saved to inventory, the Inv Qty field becomes disabled (so you can see what was added), and the status updates to reflect the item's expiration (OK / Expiring Soon / Expired). Category and Status remain read‑only. You can then adjust the Bag Qty before final submit.
+               <br>• Once all rows are ready, click <strong>Submit All</strong> to record the bag contents.</p>
+            </div>
+            <div style="height:10px"></div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"> <label>Bag</label><select id="bagSelect"></select> <button id="resetRows" class="btn secondary">Reset rows</button> <button id="submitAll" class="btn">Submit All</button> </div>
+            <div class="tableWrap">
+               <table>
+                  <thead>
+                     <tr>
+                        <th>Scan / Lot # / Name</th>
+                        <th>Item Name</th>
+                        <th>Lot</th>
+                        <th>Expiration</th>
+                        <th>Category</th>
+                        <th>Inv Qty</th> <!-- visible when needed, disabled after add -->
+                        <th>Bag Qty</th>
+                        <th>Status</th>
+                     </tr>
+                  </thead>
+                  <tbody id="restockBody"></tbody>
+               </table>
+            </div>
+            <!-- static bottom scanner left for create form use (not used by per-row scanner) -->
+            <div id="restockScannerContainer" class="readerContainer" style="display:none">
+               <div class="scannerBox" id="restockScannerBox">
+                  <div style="color:#fff">Camera preview</div>
+               </div>
+               <button class="closeCam" id="restockCloseCam" style="display:none">✕</button>
+               <div id="restockScannerStatus" class="statusMsg"></div>
+            </div>
+         </div>
+      </div>
+
+      <script>
+      /* ---------- CONFIG: set this to your Apps Script Web App URL ---------- */
+      const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbw4KfkBFr6lcNoq-br98K7D8mewakLRfYgfBFjrwlSBLoeSihm2mAiQfZsG0Bo_qoTN5w/exec";
+
+      // ---------- Helper functions for date formatting and days remaining ----------
+      function formatDateMMDDYYYY(dateStr) {
+        if (!dateStr) return '';
+        if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          const [year, month, day] = dateStr.split('-');
+          return `${month}-${day}-${year}`;
+        }
+        try {
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return dateStr;
+          const month = ('0' + (d.getMonth() + 1)).slice(-2);
+          const day = ('0' + d.getDate()).slice(-2);
+          const year = d.getFullYear();
+          return `${month}-${day}-${year}`;
+        } catch (e) {
+          return dateStr;
+        }
+      }
+
+      function getDaysUntil(expDateStr) {
+        if (!expDateStr) return null;
+        try {
+          const [year, month, day] = expDateStr.split('-');
+          const expDate = new Date(Date.UTC(year, month-1, day));
+          const today = new Date();
+          const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+          const diff = Math.ceil((expDate - todayUTC) / (1000 * 60 * 60 * 24));
+          return diff;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function enhanceStatus(status, expDateStr) {
+        if (status === 'Expiring Soon' && expDateStr) {
+          const days = getDaysUntil(expDateStr);
+          if (days !== null && days > 0) {
+            return `Expiring Soon (${days} days)`;
+          }
+        }
+        return status;
+      }
+
+      function computeStatusFromExp(expDateStr) {
+        if (!expDateStr) return 'OK';
+        const days = getDaysUntil(expDateStr);
+        if (days === null) return 'OK';
+        if (days < 0) return 'Expired';
+        if (days <= 35) return `Expiring Soon (${days} days)`;
+        return 'OK';
+      }
+
+      // ---------- Token-based auth state ----------
+      let googleToken = localStorage.getItem('als_google_token') || null;
+      let currentUser = null;
+
+      // ---------- Bag selection persistence ----------
+      let selectedBag = '';
+
+      // JSONP helper
+      function jsonpCall(action, data, cb){
+        if (googleToken && action !== 'verifyToken') {
+          data = data || {};
+          data.token = googleToken;
+        }
+        const callbackName = "cb_" + Math.random().toString(36).slice(2);
+        window[callbackName] = function(resp){
+          try{ cb(resp); }catch(e){ console.error(e); }
+          try{ delete window[callbackName]; }catch(e){}
+          const s = document.getElementById(callbackName); if(s) s.remove();
+        };
+        let url = API_URL + "?action=" + encodeURIComponent(action) + "&callback=" + encodeURIComponent(callbackName);
+        if(data !== null && typeof data !== "undefined"){
+          url += "&data=" + encodeURIComponent(JSON.stringify(data));
+        }
+        const s = document.createElement("script"); s.src = url; s.id = callbackName;
+        s.onerror = function(){ console.error("JSONP load error", url); try{ delete window[callbackName]; }catch(e){} s.remove(); };
+        document.head.appendChild(s);
+      }
+
+      const $ = id => document.getElementById(id);
+      function esc(s){ return s==null ? "" : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+      /* ---------- scanner state ---------- */
+      let scannerStream=null, scannerVideo=null, scannerCanvas=null, scannerCtx=null, barcodeDetector=null, scanning=false, scanRAF=null;
+      let currentTargetInput=null, currentReaderId=null;
+
+      /* ---------- caches ---------- */
+      let dashboardData=null, requiredItems=[], bagList=[], categories=[];
+
+      /* ---------- Google Sign-In ---------- */
+      function handleSignIn(response) {
+        googleToken = response.credential;
+        localStorage.setItem('als_google_token', googleToken);
+        jsonpCall('verifyToken', { token: googleToken }, function(resp) {
+          if (resp && resp.email && resp.email !== 'unknown') {
+            currentUser = resp.email;
+            updateUserUI(resp.email);
+            showCard('dashboardCard');
+            refreshAll();
+          } else {
+            alert('Sign-in failed: ' + (resp.message || 'Invalid token'));
+            googleToken = null;
+            localStorage.removeItem('als_google_token');
+          }
+        });
+      }
+
+      function signOutUser() {
+        googleToken = null;
+        currentUser = null;
+        localStorage.removeItem('als_google_token');
+        if (window.google && google.accounts && google.accounts.id) {
+          google.accounts.id.disableAutoSelect();
+        }
+        updateUserUI(null);
+      }
+
+      function updateUserUI(email){
+        const el = $('currentUser');
+        if(email === null || email === undefined){
+           el.textContent = 'Signed Out';
+           ['btnDashboard','btnCreate','btnRestock'].forEach(id => {
+             const btn = $(id);
+             if(btn) btn.disabled = true;
+           });
+           ['dashboardCard','createCard','bagCard'].forEach(id => {
+             const card = $(id);
+             if(card) card.style.display = 'none';
+           });
+        } else {
+           el.textContent = email;
+           ['btnDashboard','btnCreate','btnRestock'].forEach(id => {
+             const btn = $(id);
+             if(btn) btn.disabled = false;
+           });
+        }
+      }
+
+      /* ---------- UI helpers ---------- */
+      function showCard(id){
+        if (!currentUser) return;
+        ['dashboardCard','createCard','bagCard'].forEach(c=> $(c).style.display = (c===id)?'block':'none');
+        stopScanner();
+      }
+      function refreshAll(){
+        loadDashboardData();
+        loadRequiredItems();
+        loadBagList();
+        loadCategories();
+        initRestockRows();
+      }
+
+      /* ---------- Loaders ---------- */
+      function loadDashboardData(){ jsonpCall('getDashboardData', null, function(resp){ dashboardData = resp || { stock:[], required:[], bags:[] }; populateDashboardBagSelect(); renderDashboard(); }); }
+      function loadRequiredItems(){ jsonpCall('getRequiredItems', null, function(resp){ requiredItems = resp || []; populateReqDatalist(); }); }
+      function loadBagList(){ jsonpCall('getBagList', null, function(resp){ bagList = resp || []; populateBagSelects(); }); }
+      function loadCategories(){ jsonpCall('getCategories', null, function(resp){ categories = resp || []; populateCategories(); }); }
+
+      /* ---------- populate UI with bag selection persistence ---------- */
+      function populateBagSelects(){
+        const sel = $('bagSelect');
+        const dash = $('dashboardBagSelect');
+        [sel, dash].forEach(s => {
+          if(!s) return;
+          const currentVal = s.value;
+          s.innerHTML = '<option value="">-- select --</option>';
+          (bagList||[]).forEach(b => {
+            const o = document.createElement('option');
+            o.value = b;
+            o.textContent = b;
+            s.appendChild(o);
+          });
+          if (currentVal && bagList.includes(currentVal)) {
+            s.value = currentVal;
+          } else if (s === sel && selectedBag && bagList.includes(selectedBag)) {
+            s.value = selectedBag;
+          }
+        });
+        if (sel) {
+          sel.addEventListener('change', function() {
+            selectedBag = this.value;
+          });
+        }
+      }
+
+      function populateDashboardBagSelect(){
+        const sel = $('dashboardBagSelect');
+        if(!sel) return;
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">-- select bag --</option>';
+        if(dashboardData && dashboardData.bags && dashboardData.bags.length){
+          dashboardData.bags.forEach(b => {
+            const o = document.createElement('option');
+            o.value = b.bagId || b;
+            o.textContent = b.bagId || b;
+            sel.appendChild(o);
+          });
+        }
+        if (currentVal) sel.value = currentVal;
+      }
+
+      function populateReqDatalist(filterCategory){ const dl = $('reqList'); if(!dl) return; dl.innerHTML = ''; const items = (requiredItems||[]).filter(it => (!filterCategory || filterCategory === '' || it.category === filterCategory)); items.forEach(it=>{ const o = document.createElement('option'); o.value=it.name; dl.appendChild(o); }); $('createItemName').addEventListener('input', function(){ const v=(this.value||'').trim().toLowerCase(); const found = (requiredItems||[]).find(r => (r.name||'').toLowerCase() === v); if(found) $('createCategory').value = found.category || ''; }); }
+      function populateCategories(){ const sel=$('createCategory'); if(!sel) return; sel.innerHTML = '<option value="">-- none --</option>'; (categories||[]).forEach(c=> { const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); }); }
+
+      /* ---------- Dashboard renderers (preserve view on filter toggle) ---------- */
+      function onDashboardViewToggle(){ const v=$('dashboardViewSelect').value; $('bagSelectorWrap').style.display = v==='bags' ? 'block' : 'none'; renderDashboard(); }
+      function renderDashboard(){ 
+        const view = $('dashboardViewSelect').value||'items'; 
+        if(view==='items') renderDashboardItems(); 
+        else renderDashboardBags(); 
+      }
+      function renderDashboardItems(){
+        const body=$('dashboardBody'), head=$('dashboardHead').querySelector('tr');
+        head.innerHTML = '<th>Item Name</th><th>Barcode</th><th>Lot</th><th>Expiration</th><th>Remaining</th><th>Category</th><th>Status</th>';
+        body.innerHTML = '<tr><td class="small">No data</td></tr>';
+        if(!dashboardData || !dashboardData.stock) return;
+        const hideExpired = $('hideExpired').checked;
+        const hideOutOfStock = $('hideOutOfStock').checked;
+        let rows = dashboardData.stock;
+        if(hideExpired) rows = rows.filter(r => r.status !== 'Expired');
+        if(hideOutOfStock) rows = rows.filter(r => r.remaining > 0);
+        if(rows.length===0){ body.innerHTML = '<tr><td colspan="7" class="small">No stock</td></tr>'; return; }
+        body.innerHTML = '';
+        rows.sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+        rows.forEach(r=>{
+          let status = r.status;
+          if (r.remaining <= 0) status = 'Out of Stock';
+          else if (r.status === 'Expiring Soon') {
+            status = enhanceStatus(r.status, r.expirationDate);
+          }
+          const expFormatted = formatDateMMDDYYYY(r.expirationDate);
+          const tr=document.createElement('tr');
+          tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(r.barcode)+'</td><td>'+esc(r.lotNumber)+'</td><td>'+esc(expFormatted)+'</td><td>'+esc(r.remaining)+'</td><td>'+esc(r.category)+'</td><td>'+esc(status)+'</td>';
+          body.appendChild(tr);
+        });
+      }
+      function renderDashboardBags(){
+        const selectedBag = $('dashboardBagSelect').value;
+        const body = $('dashboardBody'), head = $('dashboardHead').querySelector('tr');
+        head.innerHTML = '<th>Required Item</th><th>Required Qty</th><th>Provided Qty</th><th>Items (exp / lot)</th>';
+        body.innerHTML = '<tr><td colspan="4" class="small">Select a bag</td></tr>';
+        if(!selectedBag) return;
+        jsonpCall('getBagContents', { bagId: selectedBag }, function(results){
+          body.innerHTML = '';
+          if(!results || !results.length){ body.innerHTML = '<tr><td colspan="4" class="small">No required items</td></tr>'; return; }
+          results.forEach(r=>{
+            const providedQty = (r.items||[]).reduce((s,i)=> s + (Number(i.qty)||0), 0);
+            const itemsHtml = (r.items||[]).map(it => {
+              const expFormatted = formatDateMMDDYYYY(it.exp);
+              return '<div style="padding:4px 0">'+esc(expFormatted)+' | '+esc(it.lot||'')+'</div>';
+            }).join('');
+            const tr=document.createElement('tr');
+            tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(String(r.requiredQty))+'</td><td>'+esc(String(providedQty))+'</td><td>'+itemsHtml+'</td>';
+            body.appendChild(tr);
+          });
+        });
+      }
+
+      /* ---------- Create item ---------- */
+      function clearCreateForm(){ $('createItemName').value=''; $('createBarcode').value=''; $('createLot').value=''; $('createExp').value=''; $('createQty').value=1; $('createCategory').value=''; if($('createScannerStatus')) $('createScannerStatus').textContent=''; }
+      function createItemClient(){ const payload = { name: ($('createItemName').value||'').trim(), barcode: ($('createBarcode').value||'').trim(), lot: ($('createLot').value||'').trim(), exp: ($('createExp').value||'').trim(), qty: Number($('createQty').value||0), category: ($('createCategory').value||'').trim() }; if(!payload.name){ alert('Item name required'); return; } jsonpCall('createItem', payload, function(res){ if(!res || res.success===false){ alert((res && res.message) ? res.message : 'Create failed'); return; } refreshAll(); setTimeout(()=> { alert('Saved: ' + (res.message || 'OK')); }, 450); clearCreateForm(); }); }
+
+      /* ---------- Restock UI – Category and Status are disabled ---------- */
+      function initRestockRows(){
+        const tbody = $('restockBody');
+        if(!tbody) return;
+        tbody.innerHTML='';
+        addRestockRow();
+        addRestockRow();
+        const bagSel = $('bagSelect');
+        if (bagSel && selectedBag) bagSel.value = selectedBag;
+      }
+      function addRestockRow(){
+        const tbody = $('restockBody');
+        const idx = tbody.querySelectorAll('tr').length + 1;
+        const tr = document.createElement('tr'); tr.className='restockRow'; tr.id='row-'+idx;
+        tr.innerHTML =
+          '<td data-label="Scan / Lot # / Name"> '+
+            '<div class="scanWrap"> '+
+              '<input id="scan-'+idx+'" placeholder="Scan barcode or enter lot/name" /> '+
+              '<button id="search-'+idx+'" class="btn small secondary">🔍</button> '+
+              '<button id="cam-'+idx+'" class="cameraBtn">📷</button> '+
+            '</div> '+
+            '<div id="matches-'+idx+'"></div> '+
+          '</td> '+
+          '<td id="name-'+idx+'" data-label="Item Name"><input style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" id="nameinp-'+idx+'" /></td> '+
+          '<td id="lot-'+idx+'" data-label="Lot"><input style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" id="lotinp-'+idx+'" /></td> '+
+          '<td id="exp-'+idx+'" data-label="Expiration"><input type="date" id="expinp-'+idx+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" /></td> '+
+          '<td id="cat-'+idx+'" data-label="Category"><input style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" id="catinp-'+idx+'" class="cat-field-hidden" disabled /></td> '+
+          '<td data-label="Inv Qty"><input id="invqty-'+idx+'" type="number" min="0" value="1" style="width:84px;padding:8px;border-radius:8px;border:1px solid var(--border);" class="invqty-field" /></td> '+
+          '<td data-label="Bag Qty"><input id="bagqty-'+idx+'" type="number" min="0" value="1" style="width:84px;padding:8px;border-radius:8px;border:1px solid var(--border);" /></td> '+
+          '<td id="status-'+idx+'" data-label="Status"><input id="statusinp-'+idx+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" disabled /></td>';
+        tbody.appendChild(tr);
+        $('search-'+idx).addEventListener('click', ()=> rowLookup(idx));
+        $('scan-'+idx).addEventListener('keydown', ev=> { if(ev.key === 'Enter'){ ev.preventDefault(); rowLookup(idx); }});
+        $('cam-'+idx).addEventListener('click', ()=> { openRowScanner(idx); });
+      }
+
+      function openRowScanner(idx){ /* unchanged */ 
+        const existing = document.getElementById('rowScannerContainer-'+idx);
+        if(existing){ stopScanner(); return; }
+        const others = document.querySelectorAll('.rowScannerContainer');
+        others.forEach(o => o.remove());
+        stopScanner();
+        const row = document.getElementById('row-'+idx);
+        if(!row) return;
+        const container = document.createElement('div');
+        container.className = 'rowScannerContainer readerContainer';
+        container.id = 'rowScannerContainer-'+idx;
+        container.innerHTML =
+          '<div class="scannerBox" id="rowScannerBox-'+idx+'"><div style="color:#fff">Camera preview</div></div>' +
+          '<button class="closeCam" id="rowScannerClose-'+idx+'">✕</button>' +
+          '<div id="rowScannerStatus-'+idx+'" class="statusMsg"></div>';
+        row.parentNode.insertBefore(container, row.nextSibling);
+        const closeBtn = document.getElementById('rowScannerClose-'+idx);
+        if(closeBtn) closeBtn.addEventListener('click', stopScanner);
+        setTimeout(()=> {
+          try{ container.scrollIntoView({ behavior: 'smooth', block: 'center' }); }catch(e){}
+        }, 80);
+        startScanner('rowScannerBox-'+idx, 'scan-'+idx, 'rowScannerContainer-'+idx, 'rowScannerStatus-'+idx, 'rowScannerClose-'+idx);
+      }
+
+      function rowLookup(idx){
+        const input = $('scan-'+idx); if(!input) return;
+        const typed = (input.value||'').trim(); if(!typed){ alert('Type or scan something first'); return; }
+        const searchVal = input.dataset.scannedBarcode || typed;
+        jsonpCall('getItem', { q: searchVal, filterInvalid: true }, function(res){
+          if(!res || !res.found || !res.matches || res.matches.length===0){
+            showInlineAdd(idx, searchVal, !!input.dataset.scannedBarcode);
+            return;
+          }
+          const code = (searchVal||'').toString().trim().toLowerCase();
+          const exactMatches = res.matches.filter(m => (m.barcode||'').toString().trim().toLowerCase() === code);
+          if(exactMatches.length === 1){ applyMatchToRow(idx, exactMatches[0]); return; }
+          if(exactMatches.length > 1){ showMatchesList(idx, exactMatches); return; }
+          if(res.matches.length === 1){ applyMatchToRow(idx, res.matches[0]); return; }
+          showMatchesList(idx, res.matches);
+        });
+      }
+
+      function showMatchesList(idx, matches){
+        const holder = $('matches-'+idx); holder.innerHTML='';
+        const list = document.createElement('div'); list.className='matchList';
+        matches.forEach(m => {
+          const expFormatted = formatDateMMDDYYYY(m.exp);
+          const enhancedStatus = enhanceStatus(m.status, m.exp);
+          const item = document.createElement('div'); item.className='matchItem';
+          item.innerHTML = '<div><strong>'+esc(m.name||'-')+'</strong> — Lot:'+esc(m.lot||'-')+' — Exp:'+esc(expFormatted)+' — Qty:'+esc(m.remaining||0)+' — Status:'+esc(enhancedStatus)+'</div>';
+          const btn = document.createElement('button'); btn.className='btn small'; btn.textContent='Select';
+          btn.addEventListener('click', ()=> applyMatchToRow(idx, m));
+          item.appendChild(btn); list.appendChild(item);
+        }); holder.appendChild(list);
+      }
+
+      function applyMatchToRow(idx, match){
+        const nameInput = $('nameinp-'+idx), lotInput = $('lotinp-'+idx), expInput = $('expinp-'+idx), catInput = $('catinp-'+idx), statusInput = $('statusinp-'+idx);
+        if(nameInput) nameInput.value = match.name || '';
+        if(lotInput) lotInput.value = match.lot || '';
+        if(expInput) expInput.value = match.exp || '';
+        if(catInput) {
+          catInput.value = match.category || '';
+          catInput.classList.remove('cat-field-hidden'); // show category
+          catInput.disabled = true; // ensure disabled
+        }
+        if(statusInput) {
+          const enhanced = enhanceStatus(match.status, match.exp);
+          statusInput.value = enhanced;
+          statusInput.disabled = true;
+        }
+        const invQty = $('invqty-'+idx);
+        if(invQty) { invQty.classList.add('invqty-field'); invQty.value = '0'; }
+        const bagQty = $('bagqty-'+idx);
+        if(bagQty) bagQty.classList.remove('invqty-field');
+        const scanInp = $('scan-'+idx);
+        if(scanInp){
+          scanInp.dataset.row = match.row || '';
+          scanInp.dataset.name = match.name || '';
+          scanInp.dataset.lot = match.lot || '';
+          scanInp.dataset.exp = match.exp || '';
+          if(match.barcode) scanInp.dataset.barcode = match.barcode;
+          if(typeof match.remaining !== 'undefined') scanInp.dataset.remaining = String(match.remaining);
+          delete scanInp.dataset.scannedBarcode;
+        }
+        const matchesHolder = $('matches-'+idx);
+        if(matchesHolder) matchesHolder.innerHTML = '';
+        maybeAddRow();
+      }
+
+      function showInlineAdd(idx, scannedValue, isBarcodeScan){
+        const input = $('scan-'+idx); if(input) input.value = scannedValue;
+        const invQty = $('invqty-'+idx);
+        const bagQty = $('bagqty-'+idx);
+        if(invQty) { invQty.classList.remove('invqty-field'); invQty.value = '1'; invQty.disabled = false; }
+        if(bagQty) { bagQty.classList.remove('invqty-field'); bagQty.value = '1'; }
+
+        const nameInput = $('nameinp-'+idx), lotInput = $('lotinp-'+idx), expInput = $('expinp-'+idx), catInput = $('catinp-'+idx);
+        if(isBarcodeScan){ if(nameInput) nameInput.value=''; if(lotInput) lotInput.value=''; }
+        else {
+          const numCount = (scannedValue.match(/[0-9]/g)||[]).length;
+          const letterCount = (scannedValue.match(/[A-Za-z]/g)||[]).length;
+          const putLot = numCount > letterCount;
+          if(nameInput) nameInput.value = putLot ? '' : scannedValue;
+          if(lotInput) lotInput.value = putLot ? scannedValue : '';
+        }
+        if (catInput) {
+          catInput.classList.remove('cat-field-hidden');
+          catInput.disabled = false; // initially editable for new item
+        }
+
+        const statusCell = $('status-'+idx);
+        if(statusCell){
+          statusCell.innerHTML = '<div style="margin-top:6px"><label class="small">Replacing which required item?</label><select id="replaceReq-'+idx+'"><option value="">(select)</option></select></div><div style="margin-top:8px"><button id="addUse-'+idx+'" class="btn small">Add & Use</button></div>';
+          const replaceSel = $('replaceReq-'+idx);
+          if(replaceSel){
+            replaceSel.innerHTML = '<option value="">(select)</option>';
+            (requiredItems||[]).forEach(r => {
+              const opt = document.createElement('option');
+              opt.value = r.name || '';
+              opt.textContent = (r.name || '') + ' (' + (r.category||'') + ')';
+              replaceSel.appendChild(opt);
+            });
+            replaceSel.addEventListener('change', function(){
+              const opt = this.options[this.selectedIndex];
+              const fullText = opt.textContent;
+              const parenIndex = fullText.indexOf(' (');
+              const itemName = parenIndex > -1 ? fullText.substring(0, parenIndex) : fullText;
+              const catMatch = fullText.match(/\((.*)\)$/);
+              const cat = catMatch ? catMatch[1] : '';
+              if (itemName && $('nameinp-'+idx)) $('nameinp-'+idx).value = itemName;
+              if (cat && $('catinp-'+idx)) $('catinp-'+idx).value = cat;
+            });
+          }
+          document.addEventListener('click', function onAddUse(ev){
+            if(ev.target && ev.target.id === 'addUse-'+idx){
+              ev.preventDefault();
+              const newName = (document.getElementById('nameinp-'+idx) && document.getElementById('nameinp-'+idx).value || '').trim();
+              const newLot = (document.getElementById('lotinp-'+idx) && document.getElementById('lotinp-'+idx).value || '').trim();
+              const newExp = (document.getElementById('expinp-'+idx) && document.getElementById('expinp-'+idx).value || '').trim();
+              const replaceTarget = (document.getElementById('replaceReq-'+idx) && document.getElementById('replaceReq-'+idx).value || '').trim();
+              const categoryChosen = (document.getElementById('catinp-'+idx) && document.getElementById('catinp-'+idx).value || '').trim();
+              const invQtyVal = Number(document.getElementById('invqty-'+idx).value || 1);
+              const bagQtyVal = Number(document.getElementById('bagqty-'+idx).value || 1);
+              if(!newName){ alert('Item name required'); return; }
+              if(!replaceTarget){ alert('Choose required item replaced'); return; }
+              const barcodeToSend = document.getElementById('scan-'+idx).dataset.scannedBarcode || '';
+              const payload = { name:newName, barcode: barcodeToSend, lot:newLot, exp:newExp, qty: invQtyVal, category: categoryChosen || '' };
+              jsonpCall('createItem', payload, function(res){
+                if(!res || res.success===false){
+                  alert((res && res.message) ? res.message : 'Create failed');
+                  return;
+                }
+                const inp = document.getElementById('scan-'+idx);
+                if(inp){
+                  inp.dataset.row = res.stockRow || '';
+                  inp.dataset.name = newName;
+                  inp.dataset.lot = newLot;
+                  inp.dataset.exp = res.exp || newExp || '';
+                  if(payload.barcode) inp.dataset.barcode = payload.barcode;
+                }
+                const finalExp = res.exp || newExp;
+                const newStatus = computeStatusFromExp(finalExp);
+                const statusInput = document.getElementById('statusinp-'+idx);
+                if(statusInput) statusInput.value = newStatus;
+
+                const invField = document.getElementById('invqty-'+idx);
+                if(invField) {
+                  invField.disabled = true;
+                  invField.classList.remove('invqty-field'); // visible but disabled
+                }
+                // Disable category field after add
+                const catField = document.getElementById('catinp-'+idx);
+                if(catField) catField.disabled = true;
+
+                const statusCellNow = document.getElementById('status-'+idx);
+                if(statusCellNow) statusCellNow.innerHTML = '<input id="statusinp-'+idx+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" value="' + newStatus + '" disabled />';
+                const m = document.getElementById('matches-'+idx); if(m) m.innerHTML = '';
+                maybeAddRow();
+                loadDashboardData(); // refresh only dashboard, not restock rows
+              });
+              document.removeEventListener('click', onAddUse);
+            }
+          });
+        }
+      }
+
+      function maybeAddRow(){
+        const rows = document.querySelectorAll('tr.restockRow');
+        if(rows.length===0){ addRestockRow(); return; }
+        const lastIndex = rows.length;
+        const lastNameCell = $('nameinp-'+lastIndex);
+        if(lastNameCell && lastNameCell.value && lastNameCell.value.trim() !== '') addRestockRow();
+      }
+
+      function collectEntries(){
+        const bag = $('bagSelect').value || '';
+        if(!bag){ alert('Select a bag first'); return null; }
+        const rows = Array.from(document.querySelectorAll('tr.restockRow'));
+        const entries=[];
+        rows.forEach((r,i)=> {
+          const idx = i+1;
+          const scanField = $('scan-'+idx); if(!scanField) return;
+          const qtyVal = Number($('bagqty-'+idx).value || 0);
+          const stockRow = scanField.dataset.row || '';
+          const name = $('nameinp-'+idx) ? $('nameinp-'+idx).value.trim() : (scanField.dataset.name || ($('name-'+idx).innerText || '').trim());
+          const barcode = scanField.dataset.barcode || scanField.dataset.scannedBarcode || '';
+          const lot = $('lotinp-'+idx) ? $('lotinp-'+idx).value.trim() : (scanField.dataset.lot || ($('lot-'+idx).innerText || '').trim());
+          const exp = $('expinp-'+idx) ? $('expinp-'+idx).value : (scanField.dataset.exp || ($('exp-'+idx).innerText || '').trim());
+          const category = $('catinp-'+idx) ? $('catinp-'+idx).value.trim() : (scanField.dataset.category || ($('cat-'+idx).innerText || '').trim());
+          const status = $('statusinp-'+idx) ? $('statusinp-'+idx).value.trim() : ($('status-'+idx).innerText || '').trim();
+          const replaceTarget = scanField.dataset.replaceTarget || '';
+          if((stockRow || barcode || name) && qtyVal > 0){
+            entries.push({
+              bagId: bag,
+              name: name,
+              barcode: barcode,
+              lot: lot,
+              exp: exp,
+              category: category,
+              status: status,
+              qty: qtyVal,
+              row: Number(stockRow) || '',
+              replaceTarget: replaceTarget
+            });
+          }
+        });
+        return entries;
+      }
+
+      function submitAll(){
+        const entries = collectEntries();
+        if(entries === null) return;
+        if(entries.length===0){ alert('No valid items to submit'); return; }
+        jsonpCall('submitBag', entries, function(res){
+          if(!res || res.success===false){ alert((res&&res.message)?res.message:'Submit failed'); return; }
+          alert(res.message||'Submitted');
+          initRestockRows();
+          refreshAll();
+        });
+      }
+
+      /* ---------- INLINE SCANNER (unchanged) ---------- */
+      async function startScanner(boxId, targetInputId, readerContainerId, statusId, closeBtnId){
+        if(scanning) stopScanner();
+        currentTargetInput = targetInputId;
+        currentReaderId = readerContainerId;
+        const readerContainer = document.getElementById(readerContainerId);
+        const statusEl = statusId ? document.getElementById(statusId) : null;
+        const closeBtn = closeBtnId ? document.getElementById(closeBtnId) : null;
+        if(readerContainer){ readerContainer.style.display = 'block'; readerContainer.classList.add('active'); }
+        if(statusEl) statusEl.textContent = 'Starting camera...';
+        if(closeBtn) closeBtn.style.display='none';
+        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+          if(statusEl) statusEl.textContent = 'Camera not supported in this browser.';
+          alert('Camera not supported. Use Chrome (desktop/Android) or enter barcode manually.');
+          return;
+        }
+        const box = document.getElementById(boxId);
+        if(!box){
+          if(statusEl) statusEl.textContent = 'Scanner container missing';
+          return;
+        }
+        if(!scannerVideo){
+          scannerVideo = document.createElement('video');
+          scannerVideo.className = 'scannerVideo';
+          scannerVideo.autoplay=true; scannerVideo.playsInline=true; scannerVideo.muted=true;
+          box.innerHTML = '';
+          box.appendChild(scannerVideo);
+        } else {
+          if(scannerVideo.parentNode !== box){
+            if(scannerVideo.parentNode) scannerVideo.parentNode.removeChild(scannerVideo);
+            box.appendChild(scannerVideo);
+          }
+        }
+        if(!scannerCanvas){ scannerCanvas = document.createElement('canvas'); scannerCtx = scannerCanvas.getContext('2d'); }
+        try{
+          if('BarcodeDetector' in window){
+            try{ barcodeDetector = new BarcodeDetector({formats:['qr_code','code_128','ean_13','ean_8','upc_a','upc_e','code_39','itf','data_matrix']}); }catch(e){ barcodeDetector = new BarcodeDetector(); }
+          } else { barcodeDetector = null; }
+        }catch(e){ barcodeDetector = null; console.error(e); }
+        if(!barcodeDetector){
+          if(statusEl) statusEl.textContent = 'BarcodeDetector not available. Use Chrome or enter code manually.';
+          alert('Browser does not support native BarcodeDetector. Use Chrome or type barcode manually.');
+          return;
+        }
+        const constraints = { video: { facingMode: { exact: 'environment' } } };
+        const fallback = { video: { facingMode: 'environment' } };
+        try{
+          scannerStream = await navigator.mediaDevices.getUserMedia(constraints).catch(()=> navigator.mediaDevices.getUserMedia(fallback));
+          scannerVideo.srcObject = scannerStream;
+          await scannerVideo.play();
+          if(statusEl) statusEl.textContent = 'Scanning — point camera at barcode';
+          scanning = true;
+          if(closeBtn) closeBtn.style.display = 'inline-block';
+          scanLoop();
+        }catch(err){
+          console.error('getUserMedia error', err);
+          if(statusEl) statusEl.textContent = 'Camera access denied or failed.';
+          alert('Camera access denied or failed. Make sure the page is loaded over HTTPS and you allowed camera access.');
+          if(readerContainer){ readerContainer.style.display = 'none'; readerContainer.classList.remove('active'); }
+          stopScanner();
+        }
+      }
+      async function scanLoop(){
+        if(!scanning || !scannerVideo) return;
+        try{
+          const w = scannerVideo.videoWidth, h = scannerVideo.videoHeight;
+          if(w && h){
+            scannerCanvas.width = w; scannerCanvas.height = h;
+            scannerCtx.drawImage(scannerVideo, 0, 0, w, h);
+            const detections = await barcodeDetector.detect(scannerCanvas).catch(e=>{ console.error('detect err', e); return []; });
+            if(detections && detections.length){
+              const code = detections[0].rawValue || detections[0].value || "";
+              if(code){ await handleDetectedCode(code, currentTargetInput); stopScanner(); return; }
+            }
+          }
+        }catch(e){ console.error('scanLoop exception', e); }
+        scanRAF = requestAnimationFrame(scanLoop);
+      }
+
+      async function handleDetectedCode(code, targetInputId){
+        if(!targetInputId) return;
+        const tgt = document.getElementById(targetInputId);
+        if(!tgt) return;
+        if(targetInputId === 'createBarcode'){ tgt.value = code; tgt.dataset.scannedBarcode = code; return; }
+        const m = targetInputId.match(/^scan-(\d+)$/);
+        if(m){
+          const idx = Number(m[1]);
+          const holder = $('matches-'+idx);
+          if(holder) holder.innerHTML = '<div class="mutedText">Searching inventory...</div>';
+          jsonpCall('getItem', { q: code, filterInvalid: true }, function(res){
+            if(holder) holder.innerHTML = '';
+            if(!res || !res.found || !res.matches || res.matches.length === 0){ showInlineAdd(idx, code, true); return; }
+            const codeNorm = (code||'').toString().trim().toLowerCase();
+            const exactMatches = res.matches.filter(mm => (mm.barcode||'').toString().trim().toLowerCase() === codeNorm);
+            if(exactMatches.length === 1){ applyMatchToRow(idx, exactMatches[0]); return; }
+            if(exactMatches.length > 1){ showMatchesList(idx, exactMatches); return; }
+            if(res.matches.length === 1){ applyMatchToRow(idx, res.matches[0]); return; }
+            showMatchesList(idx, res.matches);
+          });
+        } else {
+          tgt.value = code; tgt.dataset.scannedBarcode = code;
+        }
+      }
+
+      function stopScanner(){
+        try{
+          scanning = false; currentTargetInput = null; currentReaderId = null;
+          if(scanRAF){ cancelAnimationFrame(scanRAF); scanRAF = null; }
+          if(scannerVideo){
+            try{ scannerVideo.pause(); }catch(e){}
+            if(scannerVideo.srcObject){
+              const tracks = scannerVideo.srcObject.getTracks ? scannerVideo.srcObject.getTracks() : [];
+              tracks.forEach(t => t.stop && t.stop());
+            }
+            if(scannerVideo.parentNode) scannerVideo.parentNode.removeChild(scannerVideo);
+            scannerVideo = null;
+          }
+          if(scannerStream && scannerStream.getTracks) scannerStream.getTracks().forEach(t => t.stop && t.stop());
+          scannerStream = null;
+
+          if($('createScanner')){ $('createScanner').style.display='none'; $('createScanner').classList.remove('active'); }
+          if($('restockScannerContainer')){ $('restockScannerContainer').style.display='none'; $('restockScannerContainer').classList.remove('active'); }
+          if($('createCloseCam')) $('createCloseCam').style.display='none';
+          if($('restockCloseCam')) $('restockCloseCam').style.display='none';
+
+          const rowContainers = Array.from(document.querySelectorAll('.rowScannerContainer'));
+          rowContainers.forEach(rc => { try{ rc.remove(); }catch(e){} });
+        }catch(e){ console.error('stopScanner error', e); }
+      }
+
+      /* ---------- Initialization ---------- */
+      window.onload = function () {
+        $('btnDashboard').addEventListener('click', ()=> showCard('dashboardCard'));
+        $('btnCreate').addEventListener('click', ()=> showCard('createCard'));
+        $('btnRestock').addEventListener('click', ()=> showCard('bagCard'));
+        $('btnRefresh').addEventListener('click', ()=> { location.reload(); });
+        $('btnSignOut').addEventListener('click', signOutUser);
+        $('dashboardViewSelect').addEventListener('change', onDashboardViewToggle);
+        $('dashboardBagSelect').addEventListener('change', ()=> renderDashboardBags());
+        $('hideExpired').addEventListener('change', renderDashboard);
+        $('hideOutOfStock').addEventListener('change', renderDashboard);
+        $('createCameraBtn').addEventListener('click', ()=> { const wrap = $('createScanner'); if(wrap.classList.contains('active')) { stopScanner(); return; } startScanner('createScannerBox','createBarcode','createScanner','createScannerStatus','createCloseCam'); });
+        $('createCloseCam').addEventListener('click', stopScanner);
+        $('createSave').addEventListener('click', createItemClient);
+        $('createClear').addEventListener('click', clearCreateForm);
+        $('createCategory').addEventListener('change', ()=> populateReqDatalist($('createCategory').value || ''));
+        $('resetRows').addEventListener('click', initRestockRows);
+        $('submitAll').addEventListener('click', submitAll);
+
+        function initGoogle() {
+          if (window.google && google.accounts && google.accounts.id) {
+            try {
+              google.accounts.id.initialize({
+                client_id: '225540626175-ijteecu232e4sudp76tkdf2tnd7n7gmt.apps.googleusercontent.com',
+                callback: handleSignIn,
+                auto_select: false,
+                cancel_on_tap_outside: true
+              });
+              google.accounts.id.renderButton(
+                document.getElementById('btnSignIn'),
+                { theme: 'outline', size: 'medium', text: 'signin_with' }
+              );
+            } catch (e) { console.error('Google init error:', e); }
+          } else {
+            setTimeout(initGoogle, 200);
+          }
+        }
+        initGoogle();
+
+        if (googleToken) {
+          jsonpCall('verifyToken', { token: googleToken }, function(resp) {
+            if (resp && resp.email && resp.email !== 'unknown') {
+              currentUser = resp.email;
+              updateUserUI(resp.email);
+              showCard('dashboardCard');
+              refreshAll();
+            } else {
+              googleToken = null;
+              localStorage.removeItem('als_google_token');
+              updateUserUI(null);
+            }
+          });
+        } else {
+          updateUserUI(null);
+        }
+      };
+
+      window.__als_frontend = { startScanner, stopScanner, jsonpCall };
+      </script>
+   </body>
+</html>
