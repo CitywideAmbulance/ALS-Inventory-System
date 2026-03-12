@@ -3,7 +3,7 @@
    <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width,initial-scale=1" />
-      <title>ALS Inventory — Web App v1.91</title>
+      <title>ALS Inventory — Web App v1.92</title>
       <!-- Google Identity Services -->
       <script src="https://accounts.google.com/gsi/client" async defer></script>
       <!-- Html5-Qrcode library for cross‑platform barcode scanning -->
@@ -20,6 +20,7 @@
         .btn{background:var(--primary);color:var(--on-primary);border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700}
         .btn.secondary{background:#374151}
         .btn.small{padding:6px 8px;font-size:14px;border-radius:6px}
+        .btn:disabled { opacity:0.5; cursor:not-allowed; }
         .wrap{max-width:1200px;margin:18px auto;padding:12px;display:grid;grid-template-columns:1fr;gap:18px}
         .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
         input,select{width:100%;padding:9px;border-radius:8px;border:1px solid var(--border)}
@@ -148,7 +149,7 @@
          <div class="brand">
             <img src="https://images.squarespace-cdn.com/content/v1/562e914be4b07324c716280e/1445893787747-ZY45YJQ73Y5V4688H3SD/Citywide%5BNew%5D.gif?format=1000w" alt="logo">
             <div>
-               <div style="font-weight:800">ALS Inventory — Web App v1.91</div>
+               <div style="font-weight:800">ALS Inventory — Web App v1.92</div>
                <div class="small signedInWrap">
                  Signed in as: <span id="currentUser">...</span>
                  <div id="btnSignIn"></div>
@@ -161,6 +162,7 @@
             <button id="btnCreate" class="btn">Create Item</button>
             <button id="btnRestock" class="btn">ALS Bag Restock</button>
             <button id="btnRefresh" class="btn secondary">Refresh</button>
+            <button id="btnSyncStock" class="btn secondary" style="background:#4b5563;">Sync Stock</button>
          </div>
       </div>
       <div class="wrap">
@@ -279,7 +281,7 @@
 
       <script>
       /* ---------- CONFIG: set this to your Apps Script Web App URL ---------- */
-      const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbw2XxPUtwAriTUnYmrAGXb9gw9mTnmz7Yd-0vm-I-JBN8TCmEa3yNa8PPLY0-sVTY5mqw/exec";
+      const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbxSJjkmO2Kjh_pWbC3ffq98rhNw_cxsdM6n1mEaao1_y1K0jDtKpcbtwJ0nSkoXydGqMg/exec";
 
       // ---------- Helper functions for date formatting and days remaining ----------
       function formatDateMMDDYYYY(dateStr) {
@@ -340,6 +342,20 @@
       // ---------- Bag selection persistence ----------
       let selectedBag = '';
 
+      // ---------- Debounce helper ----------
+      function disableButton(btn, callback) {
+        if (!btn) return callback();
+        btn.disabled = true;
+        const originalText = btn.textContent;
+        btn.textContent = '...';
+        const restore = () => {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        };
+        // Execute callback and ensure restore after completion
+        Promise.resolve(callback()).finally(restore).catch(restore);
+      }
+
       // JSONP helper
       function jsonpCall(action, data, cb){
         if (googleToken && action !== 'verifyToken') {
@@ -366,8 +382,7 @@
 
       /* ---------- scanner state using html5-qrcode ---------- */
       let html5QrCode = null;
-      let currentScannerContainerId = null;
-      let currentTargetInputId = null;
+      let currentTargetInput = null;
       let currentReaderId = null;
 
       /* ---------- caches ---------- */
@@ -405,7 +420,7 @@
         const el = $('currentUser');
         if(email === null || email === undefined){
            el.textContent = 'Signed Out';
-           ['btnDashboard','btnCreate','btnRestock'].forEach(id => {
+           ['btnDashboard','btnCreate','btnRestock','btnSyncStock'].forEach(id => {
              const btn = $(id);
              if(btn) btn.disabled = true;
            });
@@ -415,7 +430,7 @@
            });
         } else {
            el.textContent = email;
-           ['btnDashboard','btnCreate','btnRestock'].forEach(id => {
+           ['btnDashboard','btnCreate','btnRestock','btnSyncStock'].forEach(id => {
              const btn = $(id);
              if(btn) btn.disabled = false;
            });
@@ -545,7 +560,21 @@
 
       /* ---------- Create item ---------- */
       function clearCreateForm(){ $('createItemName').value=''; $('createBarcode').value=''; $('createLot').value=''; $('createExp').value=''; $('createQty').value=1; $('createCategory').value=''; if($('createScannerStatus')) $('createScannerStatus').textContent=''; }
-      function createItemClient(){ const payload = { name: ($('createItemName').value||'').trim(), barcode: ($('createBarcode').value||'').trim(), lot: ($('createLot').value||'').trim(), exp: ($('createExp').value||'').trim(), qty: Number($('createQty').value||0), category: ($('createCategory').value||'').trim() }; if(!payload.name){ alert('Item name required'); return; } jsonpCall('createItem', payload, function(res){ if(!res || res.success===false){ alert((res && res.message) ? res.message : 'Create failed'); return; } refreshAll(); setTimeout(()=> { alert('Saved: ' + (res.message || 'OK')); }, 450); clearCreateForm(); }); }
+      function createItemClient(){ 
+        const btn = $('createSave');
+        disableButton(btn, () => {
+          return new Promise((resolve) => {
+            const payload = { name: ($('createItemName').value||'').trim(), barcode: ($('createBarcode').value||'').trim(), lot: ($('createLot').value||'').trim(), exp: ($('createExp').value||'').trim(), qty: Number($('createQty').value||0), category: ($('createCategory').value||'').trim() };
+            if(!payload.name){ alert('Item name required'); resolve(); return; }
+            jsonpCall('createItem', payload, function(res){
+              if(!res || res.success===false){ alert((res && res.message) ? res.message : 'Create failed'); resolve(); return; }
+              refreshAll();
+              setTimeout(()=> { alert('Saved: ' + (res.message || 'OK')); resolve(); }, 450);
+              clearCreateForm();
+            });
+          });
+        });
+      }
 
       /* ---------- Restock UI – Category and Status are disabled ---------- */
       function initRestockRows(){
@@ -584,21 +613,18 @@
       }
 
       function openRowScanner(idx){
-        // if this row already has a scanner container, stop scanner and remove it
         const existing = document.getElementById('rowScannerContainer-'+idx);
         if(existing){
           stopScanner();
           return;
         }
-        // remove any other row scanner containers
         const others = document.querySelectorAll('.rowScannerContainer');
         others.forEach(o => o.remove());
-        stopScanner(); // ensure any running scanner is stopped
+        stopScanner();
 
         const row = document.getElementById('row-'+idx);
         if(!row) return;
 
-        // create container for scanner
         const container = document.createElement('div');
         container.className = 'rowScannerContainer readerContainer';
         container.id = 'rowScannerContainer-'+idx;
@@ -616,11 +642,9 @@
           try{ container.scrollIntoView({ behavior: 'smooth', block: 'center' }); }catch(e){}
         }, 80);
 
-        // Start scanner using html5-qrcode
         startScannerHtml5('rowScannerBox-'+idx, 'scan-'+idx, 'rowScannerContainer-'+idx, 'rowScannerStatus-'+idx, 'rowScannerClose-'+idx);
       }
 
-      // New scanner using html5-qrcode (cross-platform)
       async function startScannerHtml5(boxId, targetInputId, readerContainerId, statusId, closeBtnId){
         if (html5QrCode) {
           await html5QrCode.stop().catch(e => console.log(e));
@@ -647,15 +671,13 @@
           return;
         }
 
-        // Clear any previous content
         box.innerHTML = '';
 
         try {
           html5QrCode = new Html5Qrcode(boxId);
           const qrCodeSuccessCallback = (decodedText, decodedResult) => {
-            // Handle the scanned code
             handleDetectedCode(decodedText, targetInputId);
-            stopScanner(); // Stop after first scan
+            stopScanner();
           };
           const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
@@ -663,9 +685,7 @@
             { facingMode: "environment" },
             config,
             qrCodeSuccessCallback,
-            (errorMessage) => {
-              // Ignore; scanning continues
-            }
+            (errorMessage) => {}
           );
 
           if(statusEl) statusEl.textContent = 'Scanning — point camera at barcode';
@@ -681,7 +701,6 @@
         }
       }
 
-      // Update create camera button to use html5-qrcode
       $('createCameraBtn').addEventListener('click', ()=> {
         const wrap = $('createScanner');
         if(wrap.classList.contains('active')) {
@@ -691,11 +710,6 @@
         startScannerHtml5('createScannerBox', 'createBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam');
       });
 
-      // Modify the existing startScanner to also use html5-qrcode for backward compatibility? We'll replace all calls.
-
-      // But we still have references in openRowScanner which we updated. Also handle other potential calls.
-      // We'll keep the old startScanner function as a fallback but not use it.
-
       function stopScanner(){
         if (html5QrCode) {
           html5QrCode.stop().then(() => {
@@ -703,7 +717,6 @@
           }).catch(e => console.log(e));
         }
 
-        // Hide all scanner containers
         if($('createScanner')){
           $('createScanner').style.display = 'none';
           $('createScanner').classList.remove('active');
@@ -747,8 +760,6 @@
         }
       }
 
-      /* ---------- Rest of the functions (unchanged) ---------- */
-
       function rowLookup(idx){
         const input = $('scan-'+idx); if(!input) return;
         const typed = (input.value||'').trim(); if(!typed){ alert('Type or scan something first'); return; }
@@ -788,8 +799,8 @@
         if(expInput) expInput.value = match.exp || '';
         if(catInput) {
           catInput.value = match.category || '';
-          catInput.classList.remove('cat-field-hidden'); // show category
-          catInput.disabled = true; // ensure disabled
+          catInput.classList.remove('cat-field-hidden');
+          catInput.disabled = true;
         }
         if(statusInput) {
           const enhanced = enhanceStatus(match.status, match.exp);
@@ -833,7 +844,7 @@
         }
         if (catInput) {
           catInput.classList.remove('cat-field-hidden');
-          catInput.disabled = false; // initially editable for new item
+          catInput.disabled = false;
         }
 
         const statusCell = $('status-'+idx);
@@ -862,49 +873,55 @@
           document.addEventListener('click', function onAddUse(ev){
             if(ev.target && ev.target.id === 'addUse-'+idx){
               ev.preventDefault();
-              const newName = (document.getElementById('nameinp-'+idx) && document.getElementById('nameinp-'+idx).value || '').trim();
-              const newLot = (document.getElementById('lotinp-'+idx) && document.getElementById('lotinp-'+idx).value || '').trim();
-              const newExp = (document.getElementById('expinp-'+idx) && document.getElementById('expinp-'+idx).value || '').trim();
-              const replaceTarget = (document.getElementById('replaceReq-'+idx) && document.getElementById('replaceReq-'+idx).value || '').trim();
-              const categoryChosen = (document.getElementById('catinp-'+idx) && document.getElementById('catinp-'+idx).value || '').trim();
-              const invQtyVal = Number(document.getElementById('invqty-'+idx).value || 1);
-              const bagQtyVal = Number(document.getElementById('bagqty-'+idx).value || 1);
-              if(!newName){ alert('Item name required'); return; }
-              if(!replaceTarget){ alert('Choose required item replaced'); return; }
-              const barcodeToSend = document.getElementById('scan-'+idx).dataset.scannedBarcode || '';
-              const payload = { name:newName, barcode: barcodeToSend, lot:newLot, exp:newExp, qty: invQtyVal, category: categoryChosen || '' };
-              jsonpCall('createItem', payload, function(res){
-                if(!res || res.success===false){
-                  alert((res && res.message) ? res.message : 'Create failed');
-                  return;
-                }
-                const inp = document.getElementById('scan-'+idx);
-                if(inp){
-                  inp.dataset.row = res.stockRow || '';
-                  inp.dataset.name = newName;
-                  inp.dataset.lot = newLot;
-                  inp.dataset.exp = res.exp || newExp || '';
-                  if(payload.barcode) inp.dataset.barcode = payload.barcode;
-                }
-                const finalExp = res.exp || newExp;
-                const newStatus = computeStatusFromExp(finalExp);
-                const statusInput = document.getElementById('statusinp-'+idx);
-                if(statusInput) statusInput.value = newStatus;
+              const addUseBtn = ev.target;
+              disableButton(addUseBtn, () => {
+                return new Promise((resolve) => {
+                  const newName = (document.getElementById('nameinp-'+idx) && document.getElementById('nameinp-'+idx).value || '').trim();
+                  const newLot = (document.getElementById('lotinp-'+idx) && document.getElementById('lotinp-'+idx).value || '').trim();
+                  const newExp = (document.getElementById('expinp-'+idx) && document.getElementById('expinp-'+idx).value || '').trim();
+                  const replaceTarget = (document.getElementById('replaceReq-'+idx) && document.getElementById('replaceReq-'+idx).value || '').trim();
+                  const categoryChosen = (document.getElementById('catinp-'+idx) && document.getElementById('catinp-'+idx).value || '').trim();
+                  const invQtyVal = Number(document.getElementById('invqty-'+idx).value || 1);
+                  const bagQtyVal = Number(document.getElementById('bagqty-'+idx).value || 1);
+                  if(!newName){ alert('Item name required'); resolve(); return; }
+                  if(!replaceTarget){ alert('Choose required item replaced'); resolve(); return; }
+                  const barcodeToSend = document.getElementById('scan-'+idx).dataset.scannedBarcode || '';
+                  const payload = { name:newName, barcode: barcodeToSend, lot:newLot, exp:newExp, qty: invQtyVal, category: categoryChosen || '' };
+                  jsonpCall('createItem', payload, function(res){
+                    if(!res || res.success===false){
+                      alert((res && res.message) ? res.message : 'Create failed');
+                      resolve();
+                      return;
+                    }
+                    const inp = document.getElementById('scan-'+idx);
+                    if(inp){
+                      inp.dataset.row = res.stockRow || '';
+                      inp.dataset.name = newName;
+                      inp.dataset.lot = newLot;
+                      inp.dataset.exp = res.exp || newExp || '';
+                      if(payload.barcode) inp.dataset.barcode = payload.barcode;
+                    }
+                    const finalExp = res.exp || newExp;
+                    const newStatus = computeStatusFromExp(finalExp);
+                    const statusInput = document.getElementById('statusinp-'+idx);
+                    if(statusInput) statusInput.value = newStatus;
 
-                const invField = document.getElementById('invqty-'+idx);
-                if(invField) {
-                  invField.disabled = true;
-                  invField.classList.remove('invqty-field'); // visible but disabled
-                }
-                // Disable category field after add
-                const catField = document.getElementById('catinp-'+idx);
-                if(catField) catField.disabled = true;
+                    const invField = document.getElementById('invqty-'+idx);
+                    if(invField) {
+                      invField.disabled = true;
+                      invField.classList.remove('invqty-field');
+                    }
+                    const catField = document.getElementById('catinp-'+idx);
+                    if(catField) catField.disabled = true;
 
-                const statusCellNow = document.getElementById('status-'+idx);
-                if(statusCellNow) statusCellNow.innerHTML = '<input id="statusinp-'+idx+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" value="' + newStatus + '" disabled />';
-                const m = document.getElementById('matches-'+idx); if(m) m.innerHTML = '';
-                maybeAddRow();
-                loadDashboardData(); // refresh only dashboard, not restock rows
+                    const statusCellNow = document.getElementById('status-'+idx);
+                    if(statusCellNow) statusCellNow.innerHTML = '<input id="statusinp-'+idx+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" value="' + newStatus + '" disabled />';
+                    const m = document.getElementById('matches-'+idx); if(m) m.innerHTML = '';
+                    maybeAddRow();
+                    loadDashboardData();
+                    resolve();
+                  });
+                });
               });
               document.removeEventListener('click', onAddUse);
             }
@@ -956,16 +973,41 @@
       }
 
       function submitAll(){
-        const entries = collectEntries();
-        if(entries === null) return;
-        if(entries.length===0){ alert('No valid items to submit'); return; }
-        jsonpCall('submitBag', entries, function(res){
-          if(!res || res.success===false){ alert((res&&res.message)?res.message:'Submit failed'); return; }
-          alert(res.message||'Submitted');
-          initRestockRows();
-          refreshAll();
+        const btn = $('submitAll');
+        disableButton(btn, () => {
+          return new Promise((resolve) => {
+            const entries = collectEntries();
+            if(entries === null){ resolve(); return; }
+            if(entries.length===0){ alert('No valid items to submit'); resolve(); return; }
+            jsonpCall('submitBag', entries, function(res){
+              if(!res || res.success===false){ alert((res&&res.message)?res.message:'Submit failed'); resolve(); return; }
+              alert(res.message||'Submitted');
+              initRestockRows();
+              refreshAll();
+              resolve();
+            });
+          });
         });
       }
+
+      // Sync Stock button
+      $('btnSyncStock').addEventListener('click', function() {
+        const btn = this;
+        if (!confirm('This will rebuild InventoryStock from the raw Inventory log. Continue?')) return;
+        disableButton(btn, () => {
+          return new Promise((resolve) => {
+            jsonpCall('syncInventoryStock', null, function(res) {
+              if (res && res.success) {
+                alert('Sync complete. ' + (res.count || 0) + ' items updated.');
+                refreshAll();
+              } else {
+                alert('Sync failed: ' + (res.message || 'Unknown error'));
+              }
+              resolve();
+            });
+          });
+        });
+      });
 
       /* ---------- Initialization ---------- */
       window.onload = function () {
@@ -978,7 +1020,6 @@
         $('dashboardBagSelect').addEventListener('change', ()=> renderDashboardBags());
         $('hideExpired').addEventListener('change', renderDashboard);
         $('hideOutOfStock').addEventListener('change', renderDashboard);
-        // createCameraBtn event listener already attached above
         $('createCloseCam').addEventListener('click', stopScanner);
         $('createSave').addEventListener('click', createItemClient);
         $('createClear').addEventListener('click', clearCreateForm);
