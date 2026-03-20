@@ -3,7 +3,7 @@
    <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width,initial-scale=1" />
-      <title>ALS Inventory — Web App v1.96</title>
+      <title>ALS Inventory — Web App v1.97</title>
       <script src="https://accounts.google.com/gsi/client" async defer></script>
       <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
       <style>
@@ -87,7 +87,7 @@
          <div class="brand">
             <img src="https://images.squarespace-cdn.com/content/v1/562e914be4b07324c716280e/1445893787747-ZY45YJQ73Y5V4688H3SD/Citywide%5BNew%5D.gif?format=1000w" alt="logo">
             <div>
-               <div style="font-weight:800">ALS Inventory — Web App v1.96</div>
+               <div style="font-weight:800">ALS Inventory — Web App v1.97</div>
                <div class="small signedInWrap">
                  Signed in as: <span id="currentUser">...</span>
                  <div id="btnSignIn"></div>
@@ -138,7 +138,7 @@
             </div>
          </div>
 
-         <!-- Create Item -->
+         <!-- Create -->
          <div id="createCard" class="card" style="display:none">
             <h3>Create Inventory Item</h3>
             <div class="instruction">
@@ -325,7 +325,7 @@
       </div>
 
       <script>
-      const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbyJjmObi3LKcJH4b2Yth5QWiUCUEaKAYqEusEgYeGOtr97pZiSHmpcEhhFhZXf7wKfM/exec";
+      const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbw0gh8c1VsAg0QYPuwQWMvogWyQ2dXAw6iZ08oO5d6CTmer7KU68xWO8xPC4M8Qx6-Z/exec";
 
       function formatDateMMDDYYYY(dateStr) {
         if (!dateStr) return '';
@@ -382,7 +382,7 @@
       let currentTargetInput = null;
       let currentReaderId = null;
 
-      let dashboardData=null, requiredItems=[], bagList=[], categories=[], equipmentLookups={ types:[], locations:[], statuses:[], serviceReasons:[] };
+      let dashboardData = null, requiredItems = [], bagList = [], categories = [], equipmentLookups = { types:[], locations:[], statuses:[], serviceReasons:[] };
 
       function disableButton(btn, callback) {
         if (!btn) return callback();
@@ -785,7 +785,7 @@
           [oosReason, oosComments, oosDateShipped].forEach(el => { if (el) el.disabled = false; });
           [dateReturned, inServiceDate, upcoming].forEach(el => { if (el) el.disabled = true; });
         } else if (isActive) {
-          oosWrap.style.display = 'block';
+          oosWrap.style.display = 'none';
           activeWrap.style.display = 'block';
           [oosReason, oosComments, oosDateShipped].forEach(el => { if (el) el.disabled = true; });
           [dateReturned, inServiceDate, upcoming].forEach(el => { if (el) el.disabled = false; });
@@ -836,7 +836,6 @@
             const norm = normalizeEquipmentStatus(status);
 
             const payload = {
-              // barcode is generated server-side from type + serial
               barcode: '',
               equipmentType: ($('equipmentType').value || '').trim(),
               serialNumber: ($('equipmentSerial').value || '').trim(),
@@ -912,415 +911,29 @@
       function addRestockRow(){
         const tbody = $('restockBody');
         const idx = tbody.querySelectorAll('tr.restockRow').length + 1;
-      
         const tr = document.createElement('tr');
-        tr.className = 'restockRow';
-        tr.id = 'row-' + idx;
-      
+        tr.className='restockRow';
+        tr.id='row-'+idx;
         tr.innerHTML =
-          '<td data-label="Scan / Lot # / Name">' +
-            '<div class="scanWrap">' +
-              '<input id="scan-' + idx + '" placeholder="Scan barcode or enter lot/name" />' +
-              '<button id="search-' + idx + '" class="btn small secondary">🔍</button>' +
-              '<button id="cam-' + idx + '" class="cameraBtn">📷</button>' +
-            '</div>' +
-            '<div id="matches-' + idx + '"></div>' +
-          '</td>' +
-          '<td data-label="Item Name"><input id="nameinp-' + idx + '" /></td>' +
-          '<td data-label="Lot"><input id="lotinp-' + idx + '" /></td>' +
-          '<td data-label="Expiration"><input type="date" id="expinp-' + idx + '" /></td>' +
-          '<td data-label="Category"><input id="catinp-' + idx + '" /></td>' +
-          '<td data-label="Inv Qty"><input id="invqty-' + idx + '" type="number" min="0" value="1" style="width:92px" /><div id="stockinfo-' + idx + '" class="small" style="margin-top:4px"></div></td>' +
-          '<td data-label="Bag Qty"><input id="bagqty-' + idx + '" type="number" min="0" value="1" style="width:92px" /></td>' +
-          '<td data-label="Status"><input id="statusinp-' + idx + '" /></td>';
-      
+          '<td data-label="Scan / Lot # / Name"> '+
+            '<div class="scanWrap"> '+
+              '<input id="scan-'+idx+'" placeholder="Scan barcode or enter lot/name" /> '+
+              '<button id="search-'+idx+'" class="btn small secondary">🔍</button> '+
+              '<button id="cam-'+idx+'" class="cameraBtn">📷</button> '+
+            '</div> '+
+            '<div id="matches-'+idx+'"></div> '+
+          '</td> '+
+          '<td data-label="Item Name"><input id="nameinp-'+idx+'" /></td> '+
+          '<td data-label="Lot"><input id="lotinp-'+idx+'" /></td> '+
+          '<td data-label="Expiration"><input type="date" id="expinp-'+idx+'" /></td> '+
+          '<td data-label="Category"><input id="catinp-'+idx+'" /></td> '+
+          '<td data-label="Inv Qty"><input id="invqty-'+idx+'" type="number" min="0" value="1" style="width:92px" /><div id="stockinfo-'+idx+'" class="small" style="margin-top:4px"></div></td> '+
+          '<td data-label="Bag Qty"><input id="bagqty-'+idx+'" type="number" min="0" value="1" style="width:92px" /></td> '+
+          '<td data-label="Status"><input id="statusinp-'+idx+'" /></td>';
         tbody.appendChild(tr);
-      
-        $('search-' + idx).addEventListener('click', () => rowLookup(idx));
-        $('scan-' + idx).addEventListener('keydown', ev => {
-          if (ev.key === 'Enter') {
-            ev.preventDefault();
-            rowLookup(idx);
-          }
-        });
-        $('cam-' + idx).addEventListener('click', () => openRowScanner(idx));
-      }
-      
-      function rowLookup(idx){
-        const input = $('scan-' + idx);
-        if(!input) return;
-      
-        const typed = (input.value || '').trim();
-        if(!typed){
-          alert('Type or scan something first');
-          return;
-        }
-      
-        const searchVal = input.dataset.scannedBarcode || typed;
-      
-        jsonpCall('getItem', { q: searchVal, filterInvalid: true }, function(res){
-          if(!res || !res.found || !res.matches || res.matches.length === 0){
-            showInlineAdd(idx, searchVal, !!input.dataset.scannedBarcode);
-            return;
-          }
-      
-          const code = (searchVal || '').toString().trim().toLowerCase();
-          const exactMatches = res.matches.filter(m => (m.barcode || '').toString().trim().toLowerCase() === code);
-      
-          if(exactMatches.length === 1){
-            applyMatchToRow(idx, exactMatches[0]);
-            return;
-          }
-      
-          if(exactMatches.length > 1){
-            showMatchesList(idx, exactMatches);
-            return;
-          }
-      
-          if(res.matches.length === 1){
-            applyMatchToRow(idx, res.matches[0]);
-            return;
-          }
-      
-          showMatchesList(idx, res.matches);
-        });
-      }
-      
-      function showMatchesList(idx, matches){
-        const holder = $('matches-' + idx);
-        if(!holder) return;
-        holder.innerHTML = '';
-      
-        const list = document.createElement('div');
-        list.className = 'matchList';
-      
-        matches.forEach(m => {
-          const expFormatted = formatDateMMDDYYYY(m.exp);
-          const enhancedStatus = enhanceStatus(m.status, m.exp);
-      
-          const item = document.createElement('div');
-          item.className = 'matchItem';
-          item.innerHTML =
-            '<div><strong>' + esc(m.name || '-') + '</strong> — Lot:' +
-            esc(m.lot || '-') + ' — Exp:' + esc(expFormatted) +
-            ' — Qty:' + esc(m.remaining || 0) +
-            ' — Status:' + esc(enhancedStatus) + '</div>';
-      
-          const btn = document.createElement('button');
-          btn.className = 'btn small';
-          btn.textContent = 'Select';
-          btn.addEventListener('click', () => applyMatchToRow(idx, m));
-      
-          item.appendChild(btn);
-          list.appendChild(item);
-        });
-      
-        holder.appendChild(list);
-      }
-      
-      function applyMatchToRow(idx, match){
-        const nameInput = $('nameinp-' + idx);
-        const lotInput = $('lotinp-' + idx);
-        const expInput = $('expinp-' + idx);
-        const catInput = $('catinp-' + idx);
-        const statusInput = $('statusinp-' + idx);
-        const invQty = $('invqty-' + idx);
-        const bagQty = $('bagqty-' + idx);
-        const stockInfo = $('stockinfo-' + idx);
-        const scanInp = $('scan-' + idx);
-      
-        if(nameInput){
-          nameInput.value = match.name || '';
-          nameInput.disabled = true;
-        }
-        if(lotInput){
-          lotInput.value = match.lot || '';
-          lotInput.disabled = true;
-        }
-        if(expInput){
-          expInput.value = match.exp || '';
-          expInput.disabled = true;
-        }
-        if(catInput){
-          catInput.value = match.category || '';
-          catInput.disabled = true;
-        }
-        if(statusInput){
-          statusInput.value = enhanceStatus(match.status, match.exp) || '';
-          statusInput.disabled = true;
-        }
-        if(invQty){
-          invQty.value = String(match.remaining ?? 0);
-          invQty.disabled = true;
-        }
-        if(stockInfo){
-          stockInfo.textContent = 'In stock: ' + String(match.remaining ?? 0);
-        }
-        if(bagQty){
-          bagQty.disabled = false;
-        }
-      
-        if(scanInp){
-          scanInp.dataset.row = match.row || '';
-          scanInp.dataset.name = match.name || '';
-          scanInp.dataset.lot = match.lot || '';
-          scanInp.dataset.exp = match.exp || '';
-          scanInp.dataset.category = match.category || '';
-          scanInp.dataset.remaining = String(match.remaining ?? 0);
-          if(match.barcode) scanInp.dataset.barcode = match.barcode;
-          delete scanInp.dataset.scannedBarcode;
-          delete scanInp.dataset.replaceTarget;
-        }
-      
-        const holder = $('matches-' + idx);
-        if(holder) holder.innerHTML = '';
-        maybeAddRow();
-      }
-      
-      function showInlineAdd(idx, scannedValue, isBarcodeScan){
-        const input = $('scan-' + idx);
-        if(input) input.value = scannedValue;
-      
-        const nameInput = $('nameinp-' + idx);
-        const lotInput = $('lotinp-' + idx);
-        const expInput = $('expinp-' + idx);
-        const catInput = $('catinp-' + idx);
-        const invQty = $('invqty-' + idx);
-        const stockInfo = $('stockinfo-' + idx);
-        const statusCell = $('status-' + idx);
-      
-        if(nameInput){ nameInput.disabled = false; }
-        if(lotInput){ lotInput.disabled = false; }
-        if(expInput){ expInput.disabled = false; }
-        if(catInput){ catInput.disabled = false; }
-        if(invQty){ invQty.disabled = false; invQty.value = '1'; }
-        if(stockInfo){ stockInfo.textContent = ''; }
-      
-        if(isBarcodeScan){
-          if(nameInput) nameInput.value = '';
-          if(lotInput) lotInput.value = '';
-        } else {
-          const numCount = (scannedValue.match(/[0-9]/g) || []).length;
-          const letterCount = (scannedValue.match(/[A-Za-z]/g) || []).length;
-          const putLot = numCount > letterCount;
-          if(nameInput) nameInput.value = putLot ? '' : scannedValue;
-          if(lotInput) lotInput.value = putLot ? scannedValue : '';
-        }
-      
-        if(statusCell){
-          statusCell.innerHTML =
-            '<div style="margin-top:6px">' +
-              '<label class="small">Replacing which required item?</label>' +
-              '<select id="replaceReq-' + idx + '">' +
-                '<option value="">(select)</option>' +
-              '</select>' +
-            '</div>' +
-            '<div style="margin-top:8px">' +
-              '<button id="addUse-' + idx + '" class="btn small">Add & Use</button>' +
-            '</div>';
-      
-          const replaceSel = $('replaceReq-' + idx);
-          if(replaceSel){
-            replaceSel.innerHTML = '<option value="">(select)</option>';
-            (requiredItems || []).forEach(r => {
-              const opt = document.createElement('option');
-              opt.value = r.name || '';
-              opt.textContent = (r.name || '') + ' (' + (r.category || '') + ')';
-              replaceSel.appendChild(opt);
-            });
-      
-            replaceSel.addEventListener('change', function(){
-              const opt = this.options[this.selectedIndex];
-              const fullText = opt.textContent || '';
-              const parenIndex = fullText.indexOf(' (');
-              const itemName = parenIndex > -1 ? fullText.substring(0, parenIndex) : fullText;
-              const catMatch = fullText.match(/\((.*)\)$/);
-              const cat = catMatch ? catMatch[1] : '';
-      
-              if(itemName && $('nameinp-' + idx)) $('nameinp-' + idx).value = itemName;
-              if(cat && $('catinp-' + idx)) $('catinp-' + idx).value = cat;
-      
-              const scanField = $('scan-' + idx);
-              if(scanField) scanField.dataset.replaceTarget = this.value || '';
-            });
-          }
-      
-          const addUseBtn = $('addUse-' + idx);
-          if(addUseBtn){
-            addUseBtn.addEventListener('click', function onClick(ev){
-              ev.preventDefault();
-      
-              addUseBtn.disabled = true;
-              const originalText = addUseBtn.textContent;
-              addUseBtn.textContent = '...';
-      
-              const newName = (nameInput && nameInput.value || '').trim();
-              const newLot = (lotInput && lotInput.value || '').trim();
-              const newExp = (expInput && expInput.value || '').trim();
-              const replaceTarget = (replaceSel && replaceSel.value || '').trim();
-              const categoryChosen = (catInput && catInput.value || '').trim();
-              const invQtyVal = Number(invQty && invQty.value || 1);
-      
-              if(!newName){
-                alert('Item name required');
-                addUseBtn.disabled = false;
-                addUseBtn.textContent = originalText;
-                return;
-              }
-      
-              if(!replaceTarget){
-                alert('Choose required item replaced');
-                addUseBtn.disabled = false;
-                addUseBtn.textContent = originalText;
-                return;
-              }
-      
-              const barcodeToSend = (input && input.dataset.scannedBarcode) || '';
-      
-              const payload = {
-                name: newName,
-                barcode: barcodeToSend,
-                lot: newLot,
-                exp: newExp,
-                qty: invQtyVal,
-                category: categoryChosen || ''
-              };
-      
-              jsonpCall('createItem', payload, function(res){
-                if(!res || res.success === false){
-                  alert((res && res.message) ? res.message : 'Create failed');
-                  addUseBtn.disabled = false;
-                  addUseBtn.textContent = originalText;
-                  return;
-                }
-      
-                const finalExp = res.exp || newExp;
-                const newStatus = computeStatusFromExp(finalExp);
-      
-                if(input){
-                  input.dataset.row = res.stockRow || '';
-                  input.dataset.name = newName;
-                  input.dataset.lot = newLot;
-                  input.dataset.exp = finalExp || '';
-                  input.dataset.replaceTarget = replaceTarget;
-                  if(payload.barcode) input.dataset.barcode = payload.barcode;
-                }
-      
-                const statusInput = $('statusinp-' + idx);
-                if(statusInput){
-                  statusInput.value = newStatus;
-                  statusInput.disabled = true;
-                }
-      
-                if(invQty){
-                  invQty.disabled = true;
-                }
-                if(catInput){
-                  catInput.disabled = true;
-                }
-                if(nameInput){
-                  nameInput.disabled = true;
-                }
-                if(lotInput){
-                  lotInput.disabled = true;
-                }
-                if(expInput){
-                  expInput.disabled = true;
-                }
-      
-                const cell = $('status-' + idx);
-                if(cell){
-                  cell.innerHTML = '<input id="statusinp-' + idx + '" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" value="' + esc(newStatus) + '" disabled />';
-                }
-      
-                const m = $('matches-' + idx);
-                if(m) m.innerHTML = '';
-      
-                maybeAddRow();
-                loadDashboardData();
-              });
-            }, { once: true });
-          }
-        }
-      }
-      
-      function maybeAddRow(){
-        const rows = document.querySelectorAll('tr.restockRow');
-        if(rows.length === 0){
-          addRestockRow();
-          return;
-        }
-        const lastIndex = rows.length;
-        const lastNameCell = $('nameinp-' + lastIndex);
-        if(lastNameCell && lastNameCell.value && lastNameCell.value.trim() !== '') addRestockRow();
-      }
-      
-      function collectEntries(){
-        const bag = $('bagSelect').value || '';
-        if(!bag){
-          alert('Select a bag first');
-          return null;
-        }
-      
-        const rows = Array.from(document.querySelectorAll('tr.restockRow'));
-        const entries = [];
-      
-        rows.forEach((r, i) => {
-          const idx = i + 1;
-          const scanField = $('scan-' + idx);
-          if(!scanField) return;
-      
-          const qtyVal = Number($('bagqty-' + idx).value || 0);
-          const stockRow = scanField.dataset.row || '';
-          const name = $('nameinp-' + idx) ? $('nameinp-' + idx).value.trim() : (scanField.dataset.name || '');
-          const barcode = scanField.dataset.barcode || scanField.dataset.scannedBarcode || '';
-          const lot = $('lotinp-' + idx) ? $('lotinp-' + idx).value.trim() : (scanField.dataset.lot || '');
-          const exp = $('expinp-' + idx) ? $('expinp-' + idx).value : (scanField.dataset.exp || '');
-          const category = $('catinp-' + idx) ? $('catinp-' + idx).value.trim() : (scanField.dataset.category || '');
-          const status = $('statusinp-' + idx) ? $('statusinp-' + idx).value.trim() : '';
-          const replaceTarget = scanField.dataset.replaceTarget || '';
-      
-          if((stockRow || barcode || name) && qtyVal > 0){
-            entries.push({
-              bagId: bag,
-              name: name,
-              barcode: barcode,
-              lot: lot,
-              exp: exp,
-              category: category,
-              status: status,
-              qty: qtyVal,
-              row: Number(stockRow) || '',
-              replaceTarget: replaceTarget
-            });
-          }
-        });
-      
-        return entries;
-      }
-      
-      function submitAll(){
-        const btn = $('submitAll');
-        disableButton(btn, () => {
-          return new Promise((resolve) => {
-            const entries = collectEntries();
-            if(entries === null){ resolve(); return; }
-            if(entries.length === 0){ alert('No valid items to submit'); resolve(); return; }
-      
-            jsonpCall('submitBag', entries, function(res){
-              if(!res || res.success===false){
-                alert((res && res.message) ? res.message : 'Submit failed');
-                resolve();
-                return;
-              }
-      
-              alert(res.message || 'Submitted');
-              initRestockRows();
-              refreshAll();
-              resolve();
-            });
-          });
-        });
+        $('search-'+idx).addEventListener('click', ()=> rowLookup(idx));
+        $('scan-'+idx).addEventListener('keydown', ev=> { if(ev.key === 'Enter'){ ev.preventDefault(); rowLookup(idx); }});
+        $('cam-'+idx).addEventListener('click', ()=> { openRowScanner(idx); });
       }
 
       function openRowScanner(idx){
@@ -1498,8 +1111,10 @@
       }
 
       function rowLookup(idx){
-        const input = $('scan-'+idx); if(!input) return;
-        const typed = (input.value||'').trim(); if(!typed){ alert('Type or scan something first'); return; }
+        const input = $('scan-'+idx);
+        if(!input) return;
+        const typed = (input.value||'').trim();
+        if(!typed){ alert('Type or scan something first'); return; }
         const searchVal = input.dataset.scannedBarcode || typed;
         jsonpCall('getItem', { q: searchVal, filterInvalid: true }, function(res){
           if(!res || !res.found || !res.matches || res.matches.length===0){
@@ -1516,32 +1131,56 @@
       }
 
       function showMatchesList(idx, matches){
-        const holder = $('matches-'+idx); holder.innerHTML='';
-        const list = document.createElement('div'); list.className='matchList';
+        const holder = $('matches-'+idx);
+        if(!holder) return;
+        holder.innerHTML='';
+        const list = document.createElement('div');
+        list.className='matchList';
         matches.forEach(m => {
           const expFormatted = formatDateMMDDYYYY(m.exp);
           const enhancedStatus = enhanceStatus(m.status, m.exp);
-          const item = document.createElement('div'); item.className='matchItem';
+          const item = document.createElement('div');
+          item.className='matchItem';
           item.innerHTML = '<div><strong>'+esc(m.name||'-')+'</strong> — Lot:'+esc(m.lot||'-')+' — Exp:'+esc(expFormatted)+' — Qty:'+esc(m.remaining||0)+' — Status:'+esc(enhancedStatus)+'</div>';
-          const btn = document.createElement('button'); btn.className='btn small'; btn.textContent='Select';
+          const btn = document.createElement('button');
+          btn.className='btn small';
+          btn.textContent='Select';
           btn.addEventListener('click', ()=> applyMatchToRow(idx, m));
-          item.appendChild(btn); list.appendChild(item);
-        }); holder.appendChild(list);
+          item.appendChild(btn);
+          list.appendChild(item);
+        });
+        holder.appendChild(list);
       }
 
       function applyMatchToRow(idx, match){
-        const nameInput = $('nameinp-'+idx), lotInput = $('lotinp-'+idx), expInput = $('expinp-'+idx), catInput = $('catinp-'+idx), statusInput = $('statusinp-'+idx);
+        const nameInput = $('nameinp-'+idx);
+        const lotInput = $('lotinp-'+idx);
+        const expInput = $('expinp-'+idx);
+        const catInput = $('catinp-'+idx);
+        const statusInput = $('statusinp-'+idx);
         const invQty = $('invqty-'+idx);
         const bagQty = $('bagqty-'+idx);
         const stockInfo = $('stockinfo-'+idx);
+        const scanInp = $('scan-'+idx);
 
-        if(nameInput){ nameInput.value = match.name || ''; nameInput.disabled = true; }
-        if(lotInput){ lotInput.value = match.lot || ''; lotInput.disabled = true; }
-        if(expInput){ expInput.value = match.exp || ''; expInput.disabled = true; }
-        if(catInput){ catInput.value = match.category || ''; catInput.disabled = true; }
+        if(nameInput){
+          nameInput.value = match.name || '';
+          nameInput.disabled = true;
+        }
+        if(lotInput){
+          lotInput.value = match.lot || '';
+          lotInput.disabled = true;
+        }
+        if(expInput){
+          expInput.value = match.exp || '';
+          expInput.disabled = true;
+        }
+        if(catInput){
+          catInput.value = match.category || '';
+          catInput.disabled = true;
+        }
         if(statusInput){
-          const enhanced = enhanceStatus(match.status, match.exp);
-          statusInput.value = enhanced;
+          statusInput.value = enhanceStatus(match.status, match.exp) || '';
           statusInput.disabled = true;
         }
         if(invQty){
@@ -1555,7 +1194,6 @@
           bagQty.disabled = false;
         }
 
-        const scanInp = $('scan-'+idx);
         if(scanInp){
           scanInp.dataset.row = match.row || '';
           scanInp.dataset.name = match.name || '';
@@ -1568,62 +1206,82 @@
           delete scanInp.dataset.replaceTarget;
         }
 
-        const matchesHolder = $('matches-'+idx);
-        if(matchesHolder) matchesHolder.innerHTML = '';
+        const holder = $('matches-'+idx);
+        if(holder) holder.innerHTML = '';
         maybeAddRow();
       }
 
       function showInlineAdd(idx, scannedValue, isBarcodeScan){
-        const input = $('scan-'+idx); if(input) input.value = scannedValue;
-        const nameInput = $('nameinp-'+idx), lotInput = $('lotinp-'+idx), expInput = $('expinp-'+idx), catInput = $('catinp-'+idx), invQty = $('invqty-'+idx), stockInfo = $('stockinfo-'+idx), statusInput = $('statusinp-'+idx), bagQty = $('bagqty-'+idx);
+        const input = $('scan-'+idx);
+        if(input) input.value = scannedValue;
 
-        if(nameInput) nameInput.disabled = false;
-        if(lotInput) lotInput.disabled = false;
-        if(expInput) expInput.disabled = false;
-        if(catInput) catInput.disabled = false;
-        if(invQty) invQty.disabled = false;
-        if(statusInput) statusInput.disabled = false;
-        if(stockInfo) stockInfo.textContent = '';
-        if(bagQty) bagQty.disabled = false;
+        const nameInput = $('nameinp-'+idx);
+        const lotInput = $('lotinp-'+idx);
+        const expInput = $('expinp-'+idx);
+        const catInput = $('catinp-'+idx);
+        const invQty = $('invqty-'+idx);
+        const stockInfo = $('stockinfo-'+idx);
+        const bagQty = $('bagqty-'+idx);
+        const statusCell = $('status-'+idx);
+
+        if(nameInput){ nameInput.disabled = false; }
+        if(lotInput){ lotInput.disabled = false; }
+        if(expInput){ expInput.disabled = false; }
+        if(catInput){ catInput.disabled = false; }
+        if(invQty){ invQty.disabled = false; invQty.value = '1'; }
+        if(stockInfo){ stockInfo.textContent = ''; }
+        if(bagQty){ bagQty.disabled = false; }
 
         if(isBarcodeScan){
-          if(nameInput) nameInput.value='';
-          if(lotInput) lotInput.value='';
+          if(nameInput) nameInput.value = '';
+          if(lotInput) lotInput.value = '';
         } else {
-          const numCount = (scannedValue.match(/[0-9]/g)||[]).length;
-          const letterCount = (scannedValue.match(/[A-Za-z]/g)||[]).length;
+          const numCount = (scannedValue.match(/[0-9]/g) || []).length;
+          const letterCount = (scannedValue.match(/[A-Za-z]/g) || []).length;
           const putLot = numCount > letterCount;
           if(nameInput) nameInput.value = putLot ? '' : scannedValue;
           if(lotInput) lotInput.value = putLot ? scannedValue : '';
         }
 
-        const statusCell = $('status-'+idx);
         if(statusCell){
-          statusCell.innerHTML = '<div style="margin-top:6px"><label class="small">Replacing which required item?</label><select id="replaceReq-'+idx+'"><option value="">(select)</option></select></div><div style="margin-top:8px"><button id="addUse-'+idx+'" class="btn small">Add & Use</button></div>';
+          statusCell.innerHTML =
+            '<div style="margin-top:6px">' +
+              '<label class="small">Replacing which required item?</label>' +
+              '<select id="replaceReq-'+idx+'">' +
+                '<option value="">(select)</option>' +
+              '</select>' +
+            '</div>' +
+            '<div style="margin-top:8px">' +
+              '<button id="addUse-'+idx+'" class="btn small">Add & Use</button>' +
+            '</div>';
+
           const replaceSel = $('replaceReq-'+idx);
           if(replaceSel){
             replaceSel.innerHTML = '<option value="">(select)</option>';
-            (requiredItems||[]).forEach(r => {
+            (requiredItems || []).forEach(r => {
               const opt = document.createElement('option');
               opt.value = r.name || '';
-              opt.textContent = (r.name || '') + ' (' + (r.category||'') + ')';
+              opt.textContent = (r.name || '') + ' (' + (r.category || '') + ')';
               replaceSel.appendChild(opt);
             });
+
             replaceSel.addEventListener('change', function(){
               const opt = this.options[this.selectedIndex];
-              const fullText = opt.textContent;
+              const fullText = opt.textContent || '';
               const parenIndex = fullText.indexOf(' (');
               const itemName = parenIndex > -1 ? fullText.substring(0, parenIndex) : fullText;
               const catMatch = fullText.match(/\((.*)\)$/);
               const cat = catMatch ? catMatch[1] : '';
+
               if (itemName && $('nameinp-'+idx)) $('nameinp-'+idx).value = itemName;
               if (cat && $('catinp-'+idx)) $('catinp-'+idx).value = cat;
+
               const scanField = $('scan-'+idx);
               if (scanField) scanField.dataset.replaceTarget = this.value || '';
             });
           }
 
-          const addUseBtn = document.getElementById('addUse-'+idx);
+          const addUseBtn = $('addUse-'+idx);
           if (addUseBtn) {
             addUseBtn.addEventListener('click', function onClick(ev) {
               ev.preventDefault();
@@ -1631,21 +1289,28 @@
               const originalText = addUseBtn.textContent;
               addUseBtn.textContent = '...';
 
-              const newName = (document.getElementById('nameinp-'+idx) && document.getElementById('nameinp-'+idx).value || '').trim();
-              const newLot = (document.getElementById('lotinp-'+idx) && document.getElementById('lotinp-'+idx).value || '').trim();
-              const newExp = (document.getElementById('expinp-'+idx) && document.getElementById('expinp-'+idx).value || '').trim();
-              const replaceTarget = (document.getElementById('replaceReq-'+idx) && document.getElementById('replaceReq-'+idx).value || '').trim();
-              const categoryChosen = (document.getElementById('catinp-'+idx) && document.getElementById('catinp-'+idx).value || '').trim();
-              const invQtyVal = Number(document.getElementById('invqty-'+idx).value || 1);
-              const bagQtyVal = Number(document.getElementById('bagqty-'+idx).value || 1);
+              const newName = (nameInput && nameInput.value || '').trim();
+              const newLot = (lotInput && lotInput.value || '').trim();
+              const newExp = (expInput && expInput.value || '').trim();
+              const replaceTarget = (replaceSel && replaceSel.value || '').trim();
+              const categoryChosen = (catInput && catInput.value || '').trim();
+              const invQtyVal = Number(invQty && invQty.value || 1);
 
-              const scanField = document.getElementById('scan-'+idx);
-              if (scanField) scanField.dataset.replaceTarget = replaceTarget;
+              if(!newName){
+                alert('Item name required');
+                addUseBtn.disabled = false;
+                addUseBtn.textContent = originalText;
+                return;
+              }
 
-              if(!newName){ alert('Item name required'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
-              if(!replaceTarget){ alert('Choose required item replaced'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
+              if(!replaceTarget){
+                alert('Choose required item replaced');
+                addUseBtn.disabled = false;
+                addUseBtn.textContent = originalText;
+                return;
+              }
 
-              const barcodeToSend = document.getElementById('scan-'+idx).dataset.scannedBarcode || '';
+              const barcodeToSend = (input && input.dataset.scannedBarcode) || '';
               const payload = { name:newName, barcode: barcodeToSend, lot:newLot, exp:newExp, qty: invQtyVal, category: categoryChosen || '' };
 
               jsonpCall('createItem', payload, function(res){
@@ -1655,30 +1320,38 @@
                   addUseBtn.textContent = originalText;
                   return;
                 }
-                const inp = document.getElementById('scan-'+idx);
-                if(inp){
-                  inp.dataset.row = res.stockRow || '';
-                  inp.dataset.name = newName;
-                  inp.dataset.lot = newLot;
-                  inp.dataset.exp = res.exp || newExp || '';
-                  if(payload.barcode) inp.dataset.barcode = payload.barcode;
-                  inp.dataset.replaceTarget = replaceTarget;
-                }
+
                 const finalExp = res.exp || newExp;
                 const newStatus = computeStatusFromExp(finalExp);
-                const statusInput = document.getElementById('statusinp-'+idx);
-                if(statusInput) statusInput.value = newStatus;
 
-                const invField = document.getElementById('invqty-'+idx);
-                if(invField) invField.disabled = true;
+                if(input){
+                  input.dataset.row = res.stockRow || '';
+                  input.dataset.name = newName;
+                  input.dataset.lot = newLot;
+                  input.dataset.exp = finalExp || '';
+                  input.dataset.replaceTarget = replaceTarget;
+                  if(payload.barcode) input.dataset.barcode = payload.barcode;
+                }
 
-                const catField = document.getElementById('catinp-'+idx);
-                if(catField) catField.disabled = true;
+                const statusInput = $('statusinp-'+idx);
+                if(statusInput){
+                  statusInput.value = newStatus;
+                  statusInput.disabled = true;
+                }
 
-                const statusCellNow = document.getElementById('status-'+idx);
-                if(statusCellNow) statusCellNow.innerHTML = '<input id="statusinp-'+idx+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" value="' + newStatus + '" disabled />';
+                if(invQty) invQty.disabled = true;
+                if(catInput) catInput.disabled = true;
+                if(nameInput) nameInput.disabled = true;
+                if(lotInput) lotInput.disabled = true;
+                if(expInput) expInput.disabled = true;
 
-                const m = document.getElementById('matches-'+idx); if(m) m.innerHTML = '';
+                if(statusCell){
+                  statusCell.innerHTML = '<input id="statusinp-'+idx+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" value="' + esc(newStatus) + '" disabled />';
+                }
+
+                const m = $('matches-'+idx);
+                if(m) m.innerHTML = '';
+
                 maybeAddRow();
                 loadDashboardData();
               });
@@ -1697,7 +1370,10 @@
 
       function collectEntries(){
         const bag = $('bagSelect').value || '';
-        if(!bag){ alert('Select a bag first'); return null; }
+        if(!bag){
+          alert('Select a bag first');
+          return null;
+        }
         const rows = Array.from(document.querySelectorAll('tr.restockRow'));
         const entries=[];
         rows.forEach((r,i)=> {
@@ -1705,12 +1381,12 @@
           const scanField = $('scan-'+idx); if(!scanField) return;
           const qtyVal = Number($('bagqty-'+idx).value || 0);
           const stockRow = scanField.dataset.row || '';
-          const name = $('nameinp-'+idx) ? $('nameinp-'+idx).value.trim() : (scanField.dataset.name || ($('name-'+idx).innerText || '').trim());
+          const name = $('nameinp-'+idx) ? $('nameinp-'+idx).value.trim() : (scanField.dataset.name || '');
           const barcode = scanField.dataset.barcode || scanField.dataset.scannedBarcode || '';
-          const lot = $('lotinp-'+idx) ? $('lotinp-'+idx).value.trim() : (scanField.dataset.lot || ($('lot-'+idx).innerText || '').trim());
-          const exp = $('expinp-'+idx) ? $('expinp-'+idx).value : (scanField.dataset.exp || ($('exp-'+idx).innerText || '').trim());
-          const category = $('catinp-'+idx) ? $('catinp-'+idx).value.trim() : (scanField.dataset.category || ($('cat-'+idx).innerText || '').trim());
-          const status = $('statusinp-'+idx) ? $('statusinp-'+idx).value.trim() : ($('status-'+idx).innerText || '').trim();
+          const lot = $('lotinp-'+idx) ? $('lotinp-'+idx).value.trim() : (scanField.dataset.lot || '');
+          const exp = $('expinp-'+idx) ? $('expinp-'+idx).value : (scanField.dataset.exp || '');
+          const category = $('catinp-'+idx) ? $('catinp-'+idx).value.trim() : (scanField.dataset.category || '');
+          const status = $('statusinp-'+idx) ? $('statusinp-'+idx).value.trim() : '';
           const replaceTarget = scanField.dataset.replaceTarget || '';
           if((stockRow || barcode || name) && qtyVal > 0){
             entries.push({
@@ -1746,10 +1422,6 @@
             });
           });
         });
-      }
-
-      function renderEquipmentStatusSectionsAfterLookup(){
-        updateEquipmentStatusUI();
       }
 
       $('btnRefresh').addEventListener('click', function() {
@@ -1822,8 +1494,6 @@
         } else {
           updateUserUI(null);
         }
-
-        $('equipmentCurrentStatus').onchange = updateEquipmentStatusUI;
       };
 
       window.__als_frontend = { stopScanner };
