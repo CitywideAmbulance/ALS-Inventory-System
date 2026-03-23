@@ -499,7 +499,9 @@
         if(currentVal) sel.value = currentVal;
       }
       function populateReqDatalist(filterCategory){
-        const dl = $('reqList'); if(!dl) return; dl.innerHTML = '';
+        const dl = $('reqList');
+        if(!dl) return;
+        dl.innerHTML = '';
         const items = (requiredItems||[]).filter(it => (!filterCategory || filterCategory === '' || it.category === filterCategory));
         items.forEach(it=>{ const o = document.createElement('option'); o.value=it.name; dl.appendChild(o); });
         const input = $('createItemName');
@@ -733,7 +735,7 @@
           '<td data-label="Category"><input id="catinp-'+idx+'" /></td> '+
           '<td data-label="Inv Qty"><input id="invqty-'+idx+'" type="number" min="0" value="1" style="width:84px" /><div id="stockinfo-'+idx+'" class="small" style="margin-top:4px"></div></td> '+
           '<td data-label="Bag Qty"><input id="bagqty-'+idx+'" type="number" min="0" value="1" style="width:84px" /></td> '+
-          '<td data-label="Status"><input id="statusinp-'+idx+'" /></td>';
+          '<td data-label="Status"><div id="statuswrap-'+idx+'"></div></td>';
         tbody.appendChild(tr);
         $('search-'+idx).addEventListener('click', ()=> rowLookup(idx));
         $('scan-'+idx).addEventListener('keydown', ev=> { if(ev.key === 'Enter'){ ev.preventDefault(); rowLookup(idx); }});
@@ -787,7 +789,8 @@
         const m = targetInputId.match(/^scan-(\d+)$/);
         if(m){
           const idx = Number(m[1]);
-          jsonpCall('getItem', { q: code, filterInvalid: true }, function(res){
+          // IMPORTANT: filterInvalid false for restock lookup
+          jsonpCall('getItem', { q: code, filterInvalid: false }, function(res){
             if(!res || !res.found || !res.matches || res.matches.length === 0){
               showInlineAdd(idx, code, true);
               return;
@@ -805,7 +808,8 @@
         const input = $('scan-'+idx); if(!input) return;
         const typed = (input.value||'').trim(); if(!typed){ alert('Type or scan something first'); return; }
         const searchVal = input.dataset.scannedBarcode || typed;
-        jsonpCall('getItem', { q: searchVal, filterInvalid: true }, function(res){
+        // IMPORTANT: filterInvalid false for restock lookup
+        jsonpCall('getItem', { q: searchVal, filterInvalid: false }, function(res){
           if(!res || !res.found || !res.matches || res.matches.length===0){
             showInlineAdd(idx, searchVal, !!input.dataset.scannedBarcode);
             return;
@@ -831,15 +835,19 @@
         holder.appendChild(list);
       }
       function applyMatchToRow(idx, match){
-        const nameInput = $('nameinp-'+idx), lotInput = $('lotinp-'+idx), expInput = $('expinp-'+idx), catInput = $('catinp-'+idx), statusInput = $('statusinp-'+idx), invQty = $('invqty-'+idx), bagQty = $('bagqty-'+idx), stockInfo = $('stockinfo-'+idx), scanInp = $('scan-'+idx);
+        const nameInput = $('nameinp-'+idx), lotInput = $('lotinp-'+idx), expInput = $('expinp-'+idx), catInput = $('catinp-'+idx), invQty = $('invqty-'+idx), bagQty = $('bagqty-'+idx), stockInfo = $('stockinfo-'+idx), scanInp = $('scan-'+idx);
         if(nameInput){ nameInput.value = match.name || ''; nameInput.disabled = true; }
         if(lotInput){ lotInput.value = match.lot || ''; lotInput.disabled = true; }
         if(expInput){ expInput.value = match.exp || ''; expInput.disabled = true; }
         if(catInput){ catInput.value = match.category || ''; catInput.disabled = true; }
-        if(statusInput){ statusInput.value = enhanceStatus(match.status, match.exp) || ''; statusInput.disabled = true; }
         if(invQty){ invQty.value = String(match.remaining ?? 0); invQty.disabled = true; }
         if(stockInfo){ stockInfo.textContent = 'In stock: ' + String(match.remaining ?? 0); }
         if(bagQty){ bagQty.disabled = false; }
+
+        const finalStatus = enhanceStatus(match.status, match.exp) || 'OK';
+        const statusWrap = $('statuswrap-'+idx);
+        if(statusWrap) statusWrap.innerHTML = '<input id="statusinp-'+idx+'" value="'+esc(finalStatus)+'" disabled style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" />';
+
         if(scanInp){
           scanInp.dataset.row = match.row || '';
           scanInp.dataset.name = match.name || '';
@@ -854,36 +862,79 @@
         const holder = $('matches-'+idx); if(holder) holder.innerHTML = '';
         maybeAddRow();
       }
+      function setStatusCellWithReplacementUI(idx, currentStatus, replacementRequired){
+        const wrap = $('statuswrap-'+idx);
+        if(!wrap) return;
+
+        wrap.innerHTML =
+          '<input id="statusinp-'+idx+'" value="' + esc(currentStatus || 'OK') + '" disabled style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" />' +
+          (replacementRequired ? (
+            '<div style="margin-top:6px">' +
+              '<label class="small">Replacing item</label>' +
+              '<select id="replaceReq-'+idx+'">' +
+                '<option value="">(select)</option>' +
+              '</select>' +
+            '</div>' +
+            '<div style="margin-top:8px">' +
+              '<button id="addUse-'+idx+'" class="btn small">Add & Use</button>' +
+            '</div>'
+          ) : '');
+      }
+      function updateInlineStatus(idx){
+        const expInput = $('expinp-' + idx);
+        const statusInput = $('statusinp-' + idx);
+        if(!expInput || !statusInput) return;
+        statusInput.value = computeStatusFromExp(expInput.value || '');
+      }
       function showInlineAdd(idx, scannedValue, isBarcodeScan){
         const input = $('scan-'+idx); if(input) input.value = scannedValue;
-        const nameInput = $('nameinp-'+idx), lotInput = $('lotinp-'+idx), expInput = $('expinp-'+idx), catInput = $('catinp-'+idx), invQty = $('invqty-'+idx), stockInfo = $('stockinfo-'+idx), statusCell = $('status-'+idx), bagQty = $('bagqty-'+idx);
+
+        const nameInput = $('nameinp-'+idx);
+        const lotInput = $('lotinp-'+idx);
+        const expInput = $('expinp-'+idx);
+        const catInput = $('catinp-'+idx);
+        const invQty = $('invqty-'+idx);
+        const stockInfo = $('stockinfo-'+idx);
+        const bagQty = $('bagqty-'+idx);
+
         if(nameInput) nameInput.disabled = false;
         if(lotInput) lotInput.disabled = false;
         if(expInput) expInput.disabled = false;
         if(catInput) catInput.disabled = false;
-        if(invQty) { invQty.disabled = false; invQty.value = 1; }
+        if(invQty) { invQty.disabled = false; invQty.value = '1'; }
         if(stockInfo) stockInfo.textContent = '';
         if(bagQty) bagQty.disabled = false;
+
         if(isBarcodeScan){
           if(nameInput) nameInput.value = '';
           if(lotInput) lotInput.value = '';
-        }else{
-          const numCount = (scannedValue.match(/[0-9]/g)||[]).length;
-          const letterCount = (scannedValue.match(/[A-Za-z]/g)||[]).length;
+        } else {
+          const numCount = (scannedValue.match(/[0-9]/g) || []).length;
+          const letterCount = (scannedValue.match(/[A-Za-z]/g) || []).length;
           const putLot = numCount > letterCount;
           if(nameInput) nameInput.value = putLot ? '' : scannedValue;
           if(lotInput) lotInput.value = putLot ? scannedValue : '';
         }
-        if(statusCell){
-          statusCell.innerHTML = '<div style="margin-top:6px"><label class="small">Replacing which required item?</label><select id="replaceReq-'+idx+'"><option value="">(select)</option></select></div><div style="margin-top:8px"><button id="addUse-'+idx+'" class="btn small">Add & Use</button></div>';
-          const replaceSel = $('replaceReq-'+idx);
+
+        const currentStatus = computeStatusFromExp(expInput ? expInput.value : '');
+        setStatusCellWithReplacementUI(idx, currentStatus, true);
+        updateInlineStatus(idx);
+
+        if(expInput){
+          expInput.oninput = function(){ updateInlineStatus(idx); };
+          expInput.onchange = function(){ updateInlineStatus(idx); };
+        }
+
+        const replaceSel = $('replaceReq-' + idx);
+        if(replaceSel){
           replaceSel.innerHTML = '<option value="">(select)</option>';
-          (requiredItems||[]).forEach(r => {
+          (requiredItems || []).forEach(r => {
             const opt = document.createElement('option');
             opt.value = r.name || '';
-            opt.textContent = (r.name || '') + ' (' + (r.category||'') + ')';
+            opt.textContent = (r.name || '') + ' (' + (r.category || '') + ')';
             replaceSel.appendChild(opt);
           });
+
           replaceSel.addEventListener('change', function(){
             const opt = this.options[this.selectedIndex];
             const fullText = opt.textContent || '';
@@ -896,7 +947,10 @@
             const scanField = $('scan-'+idx);
             if(scanField) scanField.dataset.replaceTarget = this.value || '';
           });
-          const addUseBtn = $('addUse-'+idx);
+        }
+
+        const addUseBtn = $('addUse-'+idx);
+        if(addUseBtn){
           addUseBtn.addEventListener('click', function onClick(ev){
             ev.preventDefault();
             addUseBtn.disabled = true;
@@ -910,11 +964,46 @@
             const categoryChosen = (catInput && catInput.value || '').trim();
             const invQtyVal = Number(invQty && invQty.value || 1);
 
-            if(!newName){ alert('Item name required'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
-            if(!replaceTarget){ alert('Choose required item replaced'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
+            if(!newName){
+              alert('Item name required');
+              addUseBtn.disabled = false;
+              addUseBtn.textContent = originalText;
+              return;
+            }
+            if(!newLot){
+              alert('Lot number required');
+              addUseBtn.disabled = false;
+              addUseBtn.textContent = originalText;
+              return;
+            }
+            if(!newExp){
+              alert('Expiration date required');
+              addUseBtn.disabled = false;
+              addUseBtn.textContent = originalText;
+              return;
+            }
+            if(!invQtyVal || invQtyVal <= 0){
+              alert('Inv Qty must be greater than 0');
+              addUseBtn.disabled = false;
+              addUseBtn.textContent = originalText;
+              return;
+            }
+            if(!replaceTarget){
+              alert('Choose required item replaced');
+              addUseBtn.disabled = false;
+              addUseBtn.textContent = originalText;
+              return;
+            }
 
             const barcodeToSend = (input && input.dataset.scannedBarcode) || '';
-            const payload = { name:newName, barcode: barcodeToSend, lot:newLot, exp:newExp, qty: invQtyVal, category: categoryChosen || '' };
+            const payload = {
+              name: newName,
+              barcode: barcodeToSend,
+              lot: newLot,
+              exp: newExp,
+              qty: invQtyVal,
+              category: categoryChosen || ''
+            };
 
             jsonpCall('createItem', payload, function(res){
               if(!res || res.success===false){
@@ -923,27 +1012,43 @@
                 addUseBtn.textContent = originalText;
                 return;
               }
-              const finalExp = res.exp || newExp;
-              const newStatus = computeStatusFromExp(finalExp);
+
+              const finalStatus = computeStatusFromExp(newExp);
+
               if(input){
                 input.dataset.row = res.stockRow || '';
                 input.dataset.name = newName;
                 input.dataset.lot = newLot;
-                input.dataset.exp = finalExp || '';
+                input.dataset.exp = newExp || '';
                 input.dataset.replaceTarget = replaceTarget;
                 if(payload.barcode) input.dataset.barcode = payload.barcode;
               }
-              if(statusInput) statusInput.value = newStatus;
-              if(invQty) invQty.disabled = true;
-              if(catInput) catInput.disabled = true;
+
               if(nameInput) nameInput.disabled = true;
               if(lotInput) lotInput.disabled = true;
               if(expInput) expInput.disabled = true;
-              const statusCellNow = $('status-'+idx);
-              if(statusCellNow) statusCellNow.innerHTML = '<input id="statusinp-'+idx+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" value="'+esc(newStatus)+'" disabled />';
+              if(catInput) catInput.disabled = true;
+              if(invQty) invQty.disabled = true;
+
+              const statusWrap = $('statuswrap-'+idx);
+              if(statusWrap) statusWrap.innerHTML = '<input id="statusinp-'+idx+'" value="'+esc(finalStatus)+'" disabled style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" />';
+
+              const statusInp = $('statusinp-'+idx);
+              if(statusInp) statusInp.value = finalStatus;
+
+              if(input){
+                input.dataset.finalStatus = finalStatus;
+                input.dataset.category = categoryChosen || input.dataset.category || '';
+              }
+
+              if(stockInfo) stockInfo.textContent = 'Added to inventory';
               const m = $('matches-'+idx); if(m) m.innerHTML = '';
               maybeAddRow();
-              jsonpCall('getDashboardData', null, function(resp){ dashboardData = resp || dashboardData; renderDashboard(); });
+
+              jsonpCall('getDashboardData', null, function(resp){
+                dashboardData = resp || dashboardData;
+                renderDashboard();
+              });
             });
           }, { once: true });
         }
@@ -970,7 +1075,7 @@
           const lot = $('lotinp-'+idx) ? $('lotinp-'+idx).value.trim() : (scanField.dataset.lot || '');
           const exp = $('expinp-'+idx) ? $('expinp-'+idx).value : (scanField.dataset.exp || '');
           const category = $('catinp-'+idx) ? $('catinp-'+idx).value.trim() : (scanField.dataset.category || '');
-          const status = $('statusinp-'+idx) ? $('statusinp-'+idx).value.trim() : '';
+          const status = $('statusinp-'+idx) ? $('statusinp-'+idx).value.trim() : (scanField.dataset.finalStatus || '');
           const replaceTarget = scanField.dataset.replaceTarget || '';
           if((stockRow || barcode || name) && qtyVal > 0){
             entries.push({ bagId: bag, name: name, barcode: barcode, lot: lot, exp: exp, category: category, status: status, qty: qtyVal, row: Number(stockRow) || '', replaceTarget: replaceTarget });
