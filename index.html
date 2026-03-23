@@ -1,762 +1,922 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>ALS Inventory — Web App v1.95c renewed</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ALS Inventory - Web App v1.96 renewed</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
-    :root{
-      --primary:#0b5fff; --on-primary:#fff; --muted:#6b7280; --card:#fff; --border:#e6e9ee; --radius:10px;
-      font-family: "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
-      font-size:15px;
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;background:#fff;color:#0f172a}
-    .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#fff;border-bottom:1px solid var(--border);flex-wrap:wrap}
+    :root{ --primary:#0b5fff; --on-primary:#fff; --muted:#6b7280; --card:#fff; --border:#e6e9ee; --radius:10px; font-family:Segoe UI,Roboto,Arial; font-size:15px; }
+    body{margin:0;background:#fff;color:#0f172a}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
     .brand{display:flex;align-items:center;gap:12px}
     .brand img{height:48px}
-    .brand .title{font-weight:800}
-    .top-actions{display:flex;gap:8px}
     .btn{background:var(--primary);color:var(--on-primary);border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700}
     .btn.secondary{background:#374151}
-    .wrap{max-width:1200px;margin:18px auto;padding:12px;display:grid;grid-template-columns:1fr;gap:18px}
+    .btn.small{padding:6px 8px;font-size:14px;border-radius:6px}
+    .btn:disabled{opacity:0.5;cursor:not-allowed}
+    .wrap{max-width:1260px;margin:18px auto;padding:12px;display:grid;grid-template-columns:1fr;gap:18px}
     .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
-    label{display:block;margin-bottom:6px;font-weight:700}
-    input,select,textarea{width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);font-size:14px;background:#fff}
+    input,select{width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);box-sizing:border-box}
+    input:disabled, select:disabled{background:#f3f6fb;color:#4b5563;cursor:not-allowed}
     .small{font-size:13px;color:var(--muted)}
-    .tableWrap{overflow:auto;border-radius:8px;border:1px solid var(--border);background:#fff;margin-top:8px}
-    table{width:100%;border-collapse:collapse;min-width:720px}
-    thead th{background:#f3f6fb;padding:10px;text-align:left;position:sticky;top:0;z-index:3}
+    .tableWrap{overflow:auto;border-radius:8px;border:1px solid var(--border);background:#fff;margin-top:8px;padding:8px}
+    table{width:100%;border-collapse:collapse;min-width:860px}
+    thead th{background:#f3f6fb;padding:10px;text-align:left;position:sticky;top:0;z-index:1}
     th,td{padding:10px;border-bottom:1px solid #eef0f4;vertical-align:top}
+    .cameraBtn{background:#f3f6fb;border:1px solid var(--border);padding:8px;border-radius:8px;cursor:pointer}
     .readerContainer{margin-top:8px;display:none;position:relative}
     .readerContainer.active{display:block}
-    .scannerBox{width:100%;max-width:520px;height:auto;border-radius:8px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center}
-    video.scannerVideo{width:100%;height:auto;max-height:360px;object-fit:cover}
-    .closeCam{position:absolute;z-index:30;right:8px;top:8px;background:rgba(0,0,0,0.55);color:#fff;border:none;padding:6px 8px;border-radius:6px;cursor:pointer}
-    .cameraBtn{background:#f3f6fb;border:1px solid var(--border);padding:8px;border-radius:8px;cursor:pointer}
+    .scannerBox{width:100%;max-width:720px;height:auto;border-radius:8px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center}
+    .closeCam{position:absolute;right:8px;top:8px;background:rgba(0,0,0,0.55);color:#fff;border:none;padding:6px;border-radius:6px;cursor:pointer}
     .statusMsg{margin-top:8px;font-size:13px;color:var(--muted)}
-    @media (max-width:980px){ .wrap{padding:10px} table{min-width:600px} }
+    .matchList{border:1px solid var(--border);border-radius:8px;max-height:260px;overflow:auto;margin-top:8px;background:#fff}
+    .matchItem{padding:8px 10px;border-bottom:1px solid #f3f6fb;display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .instruction{background:#f0f7ff;border-left:4px solid var(--primary);padding:10px;margin:10px 0;border-radius:0 8px 8px 0;}
+    .filter-row{display:flex;gap:24px;margin:16px 0;padding:12px 16px;background:#f9fafc;border-radius:10px;border:1px solid var(--border);align-items:center;flex-wrap:wrap}
+    #bagCard .tableWrap td .scanWrap{display:flex;gap:6px;align-items:center}
+    #bagCard .tableWrap td .scanWrap input{flex:1;min-width:0;padding:8px}
+    #bagCard .tableWrap td input[type="number"]{width:92px}
+    .rowScannerContainer{border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:8px;background:#fff}
+    .signedInWrap{display:flex;align-items:center;gap:8px}
   </style>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-
-  <script>
-  // External-host compatibility layer for GitHub Pages.
-  // Keeps the existing google.script.run call style working via JSONP.
-  const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbxEjxXEh0BMTkbVIym7tTJivDE35vHzBACh2MkOKsB7xoUNNUNaYdIkxnGENJGwMTssjA/exec";
-
-  function _alsJsonpCall(action, data, onSuccess, onFailure) {
-    const callbackName = "__als_cb_" + Math.random().toString(36).slice(2);
-    const cleanup = () => {
-      try { delete window[callbackName]; } catch (e) {}
-      const old = document.getElementById(callbackName);
-      if (old) old.remove();
-    };
-
-    window[callbackName] = function(resp) {
-      cleanup();
-      try {
-        if (onSuccess) onSuccess(resp);
-      } catch (err) {
-        console.error(err);
-        if (onFailure) onFailure(err);
-      }
-    };
-
-    let url = API_URL + "?action=" + encodeURIComponent(action) + "&callback=" + encodeURIComponent(callbackName);
-    if (typeof data !== "undefined" && data !== null) {
-      url += "&data=" + encodeURIComponent(JSON.stringify(data));
-    }
-
-    const s = document.createElement("script");
-    s.id = callbackName;
-    s.src = url;
-    s.onerror = function() {
-      cleanup();
-      if (onFailure) onFailure(new Error("JSONP load failed for " + action));
-      else console.error("JSONP load failed for " + action);
-    };
-    document.head.appendChild(s);
-  }
-
-  function _alsProxyRunner(state) {
-    return new Proxy(state, {
-      get(target, prop) {
-        if (prop === "withSuccessHandler") {
-          return function(fn) {
-            return _alsProxyRunner({ success: fn || null, failure: target.failure || null });
-          };
-        }
-        if (prop === "withFailureHandler") {
-          return function(fn) {
-            return _alsProxyRunner({ success: target.success || null, failure: fn || null });
-          };
-        }
-        if (prop === "constructor") return undefined;
-        return function() {
-          const args = Array.prototype.slice.call(arguments);
-          const payload = (args.length === 0) ? null : (args.length === 1 ? args[0] : args);
-          _alsJsonpCall(
-            String(prop),
-            payload,
-            function(resp) {
-              if (target.success) target.success(resp);
-            },
-            function(err) {
-              if (target.failure) target.failure(err);
-              else console.error(err);
-            }
-          );
-        };
-      }
-    });
-  }
-
-  window.google = window.google || {};
-  google.script = google.script || {};
-  google.script.run = _alsProxyRunner({ success: null, failure: null });
-  </script>
 </head>
 <body>
-  <div class="topbar" role="banner">
+  <div class="topbar">
     <div class="brand">
       <img src="https://images.squarespace-cdn.com/content/v1/562e914be4b07324c716280e/1445893787747-ZY45YJQ73Y5V4688H3SD/Citywide%5BNew%5D.gif?format=1000w" alt="logo">
       <div>
-        <div class="title">ALS Inventory — Web App v1.95c renewed</div>
-        <div class="small">Signed in as: <span id="currentUser">...</span></div>
+        <div style="font-weight:800">ALS Inventory - Web App v1.96 renewed</div>
+        <div class="small signedInWrap">
+          Signed in as: <span id="currentUser">...</span>
+          <div id="btnSignIn"></div>
+          <button id="btnSignOut" class="btn secondary small">Sign Out</button>
+        </div>
       </div>
     </div>
-
-    <div class="top-actions" role="navigation" aria-label="top actions">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button id="btnDashboard" class="btn">Dashboard</button>
       <button id="btnCreate" class="btn">Create Item</button>
       <button id="btnRestock" class="btn">ALS Bag Restock</button>
+      <button id="btnEquipment" class="btn">Equipment Inventory</button>
       <button id="btnRefresh" class="btn secondary">Refresh</button>
     </div>
   </div>
 
-  <div class="wrap" role="main">
-    <!-- Dashboard -->
+  <div class="wrap">
     <div id="dashboardCard" class="card" style="display:block">
-      <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
         <h3 style="margin:0">Dashboard</h3>
-        <div style="display:flex;align-items:center;gap:12px">
-          <label class="small">View:
-            <select id="dashboardViewSelect">
-              <option value="items">Items</option>
-              <option value="bags">Bags (select one)</option>
-            </select>
-          </label>
-        </div>
+        <label class="small">View:
+          <select id="dashboardViewSelect">
+            <option value="items">Items</option>
+            <option value="bags">Bags (select one)</option>
+            <option value="equipment">Equipment</option>
+          </select>
+        </label>
       </div>
-
-      <div style="height:12px"></div>
-
-      <div id="itemsControls">
-        <label><input type="checkbox" id="hideExpired" checked> Exclude expired</label>
+      <div class="filter-row">
+        <label><input type="checkbox" id="hideExpired" checked> Exclude expired items</label>
+        <label><input type="checkbox" id="hideOutOfStock"> Exclude out of stock items</label>
       </div>
-
       <div id="bagSelectorWrap" style="margin-top:8px;display:none">
         <label>Select Bag</label>
         <select id="dashboardBagSelect"></select>
       </div>
-
-      <div class="tableWrap" style="margin-top:12px">
+      <div class="tableWrap">
         <table>
           <thead id="dashboardHead"><tr></tr></thead>
-          <tbody id="dashboardBody">
-            <tr><td class="small">Loading...</td></tr>
-          </tbody>
+          <tbody id="dashboardBody"><tr><td class="small">Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
 
-    <!-- Create -->
     <div id="createCard" class="card" style="display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <h3 style="margin:0">Create Inventory Item</h3>
-      </div>
-
-      <div style="height:10px"></div>
-
+      <h3>Create Inventory Item</h3>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
-        <div>
-          <label>Category</label>
-          <select id="createCategory"></select>
-        </div>
-
-        <div>
-          <label>Item name (select or type)</label>
-          <input id="createItemName" list="reqList" placeholder="Type or choose required item">
-          <datalist id="reqList"></datalist>
-        </div>
-
+        <div><label>Category</label><select id="createCategory"><option value="">-- none --</option></select></div>
+        <div><label>Item name</label><input id="createItemName" list="reqList" placeholder="Type or choose" /><datalist id="reqList"></datalist></div>
         <div>
           <label>Barcode</label>
-          <div style="display:flex;gap:8px">
-            <input id="createBarcode" placeholder="Scan or type barcode">
-            <button id="createCameraBtn" class="cameraBtn" title="Open camera">📷</button>
-          </div>
-          <div id="createScanner" class="readerContainer">
-            <div class="scannerBox" id="createScannerBox"></div>
-            <button class="closeCam" id="createCloseCam" title="Close camera" style="display:none">✕</button>
-            <div id="createScannerStatus" class="statusMsg"></div>
-          </div>
+          <div style="display:flex;gap:8px"><input id="createBarcode" placeholder="Scan or type barcode" /><button id="createCameraBtn" class="cameraBtn">📷</button></div>
+          <div id="createScanner" class="readerContainer"><div class="scannerBox" id="createScannerBox"><div style="color:#fff">Camera preview</div></div><button class="closeCam" id="createCloseCam" style="display:none">✕</button><div id="createScannerStatus" class="statusMsg"></div></div>
         </div>
-
-        <div>
-          <label>Lot number</label>
-          <input id="createLot" placeholder="Lot number">
-        </div>
-
-        <div>
-          <label>Expiration</label>
-          <input id="createExp" type="date">
-        </div>
-
-        <div>
-          <label>Quantity</label>
-          <input id="createQty" type="number" min="0" value="1">
-        </div>
+        <div><label>Lot number</label><input id="createLot" /></div>
+        <div><label>Expiration</label><input id="createExp" type="date" /></div>
+        <div><label>Quantity</label><input id="createQty" type="number" min="0" value="1" /></div>
       </div>
-
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button id="createSave" class="btn">Save item</button>
-        <button id="createClear" class="btn secondary">Clear</button>
-      </div>
+      <div style="margin-top:12px"><button id="createSave" class="btn">Save item</button> <button id="createClear" class="btn secondary">Clear</button></div>
     </div>
 
-    <!-- Bag restock -->
-    <div id="bagCard" class="card" style="display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <h3 style="margin:0">ALS Bag Restock</h3>
-        <div class="small">Scan items, enter Qty Added, submit</div>
+    <div id="equipmentCard" class="card" style="display:none">
+      <h3>Equipment Inventory</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+        <div>
+          <label>Barcode</label>
+          <div style="display:flex;gap:8px"><input id="equipmentBarcode" placeholder="Scan or type barcode" /><button id="equipmentSearchBtn" class="btn small secondary">🔍</button><button id="equipmentCameraBtn" class="cameraBtn">📷</button></div>
+          <div id="equipmentScanner" class="readerContainer"><div class="scannerBox" id="equipmentScannerBox"><div style="color:#fff">Camera preview</div></div><button class="closeCam" id="equipmentCloseCam" style="display:none">✕</button><div id="equipmentScannerStatus" class="statusMsg"></div></div>
+        </div>
+        <div><label>Equipment Type</label><select id="equipmentType"><option value="">-- select type --</option></select></div>
+        <div><label>Serial Number</label><input id="equipmentSerial" /></div>
+        <div><label>Make</label><input id="equipmentMake" /></div>
+        <div><label>Model</label><input id="equipmentModel" /></div>
+        <div><label>Assigned Location</label><select id="equipmentLocation"><option value="">-- select location --</option></select></div>
+        <div><label>Current Status</label><select id="equipmentCurrentStatus"><option value="">-- select status --</option></select></div>
       </div>
 
-      <div style="height:10px"></div>
+      <div id="equipmentOOSSection" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+        <h4 style="margin:0 0 10px 0">OOS Details</h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+          <div><label>Service reason</label><select id="equipmentServiceReason"><option value="">-- select reason --</option></select></div>
+          <div><label>Comments</label><input id="equipmentComments" /></div>
+          <div><label>Date Shipped</label><input id="equipmentDateShipped" type="date" /></div>
+        </div>
+      </div>
 
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <div id="equipmentActiveSection" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+        <h4 style="margin:0 0 10px 0">Active / In-Service Details</h4>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+          <div><label>Date Returned</label><input id="equipmentDateReturned" type="date" /></div>
+          <div><label>In-Service Date</label><input id="equipmentInServiceDate" type="date" /></div>
+          <div><label>Upcoming Service Date</label><input id="equipmentUpcomingServiceDate" type="date" /></div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px"><button id="equipmentSave" class="btn">Save Equipment</button> <button id="equipmentClear" class="btn secondary">Clear</button></div>
+    </div>
+
+    <div id="bagCard" class="card" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <h3 style="margin:0">ALS Bag Restock</h3>
+        <div class="small">Scan items, enter quantities, submit</div>
+      </div>
+      <div class="instruction">
+        <p><strong>Instructions:</strong><br>
+        • Select a bag number.<br>
+        • Scan or type barcode / lot / name in the first column.<br>
+        • Existing item: fields lock and Bag Qty remains editable.<br>
+        • Missing item: fill fields, choose replacement, then click Add & Use.</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
         <label>Bag</label>
         <select id="bagSelect"></select>
         <button id="resetRows" class="btn secondary">Reset rows</button>
         <button id="submitAll" class="btn">Submit All</button>
       </div>
-
       <div class="tableWrap">
         <table>
-          <thead>
-            <tr>
-              <th style="min-width:240px">Scan / Lot # / Name</th>
-              <th>Item Name</th>
-              <th>Lot</th>
-              <th>Expiration</th>
-              <th>Category</th>
-              <th>Qty Added</th>
-              <th>Status / Replace</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Scan / Lot # / Name</th><th>Item Name</th><th>Lot</th><th>Expiration</th><th>Category</th><th>Inv Qty</th><th>Bag Qty</th><th>Status</th></tr></thead>
           <tbody id="restockBody"></tbody>
         </table>
-      </div>
-
-      <div id="restockScannerContainer" class="readerContainer" style="display:none; margin-top:12px">
-        <div class="scannerBox" id="restockScannerBox"></div>
-        <button class="closeCam" id="restockCloseCam" title="Close camera">✕</button>
-        <div id="restockScannerStatus" class="statusMsg"></div>
       </div>
     </div>
   </div>
 
 <script>
-(function(){
-  const $ = id => document.getElementById(id);
+const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbxyD3vpHEK3d7xvMj7nPusrG0oobK6Adr5zyxgcgFs7WsgDYMzQ4pdGCk5fkHKaB4iZew/exec";
 
-  // scanner state (single global scanner)
-  let scannerStream = null;
-  let scannerVideo = null;
-  let scannerCanvas = null;
-  let scannerCtx = null;
-  let scanning = false;
-  let barcodeDetector = null;
-  let scanRAF = null;
-  let currentTargetInput = null; // id string e.g. 'createBarcode' or 'scan-1'
+const $ = id => document.getElementById(id);
+const esc = s => s == null ? "" : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 
-  // caches
-  let dashboardData = null;
-  let requiredItems = [];
-  let bagList = [];
-  let categories = [];
+let googleToken = localStorage.getItem('als_google_token') || null;
+let currentUser = null;
+let selectedBag = '';
+let html5QrCode = null;
+let dashboardData = null, requiredItems = [], bagList = [], categories = [], equipmentLookups = { types:[], locations:[], statuses:[], serviceReasons:[] };
 
-  function escapeHTML(s){ if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function jsonpCall(action, data, cb){
+  if (googleToken && action !== 'verifyToken') {
+    data = data || {};
+    data.token = googleToken;
+  }
+  const callbackName = "cb_" + Math.random().toString(36).slice(2);
+  window[callbackName] = function(resp){
+    try{ cb(resp); }catch(e){ console.error(e); }
+    try{ delete window[callbackName]; }catch(e){}
+    const s = document.getElementById(callbackName); if(s) s.remove();
+  };
+  let url = API_URL + "?action=" + encodeURIComponent(action) + "&callback=" + encodeURIComponent(callbackName);
+  if(data !== null && typeof data !== "undefined") url += "&data=" + encodeURIComponent(JSON.stringify(data));
+  const s = document.createElement("script"); s.src = url; s.id = callbackName;
+  document.head.appendChild(s);
+}
 
-  document.addEventListener('DOMContentLoaded', ()=>{
-    // top nav
-    $('btnDashboard').addEventListener('click', ()=> showCard('dashboardCard'));
-    $('btnCreate').addEventListener('click', ()=> showCard('createCard'));
-    $('btnRestock').addEventListener('click', ()=> showCard('bagCard'));
-    $('btnRefresh').addEventListener('click', ()=> refreshAll());
+function disableButton(btn, callback) {
+  if (!btn) return callback();
+  btn.disabled = true;
+  const t = btn.textContent;
+  btn.textContent = '...';
+  Promise.resolve(callback()).finally(() => { btn.disabled = false; btn.textContent = t; });
+}
 
-    // dashboard behaviour
-    $('dashboardViewSelect').addEventListener('change', onDashboardViewToggle);
-    $('dashboardBagSelect').addEventListener('change', ()=> renderDashboardBags());
-    $('hideExpired').addEventListener('change', ()=> renderDashboardItems());
-
-    // create scanner button
-    $('createCameraBtn').addEventListener('click', ()=> {
-      const wrap = $('createScanner');
-      // toggle
-      if(wrap.classList.contains('active')){ stopScanner(); return; }
-      startScanner('createScannerBox', 'createBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam');
-    });
-    $('createCloseCam').addEventListener('click', stopScanner);
-
-    // create save/clear
-    $('createSave').addEventListener('click', createItemClient);
-    $('createClear').addEventListener('click', clearCreateForm);
-
-    // restock controls
-    $('resetRows').addEventListener('click', initRestockRows);
-    $('submitAll').addEventListener('click', submitAll);
-    $('restockCloseCam').addEventListener('click', stopScanner);
-
-    // initial loads
-    refreshAll();
-    showCard('dashboardCard');
-
-    // populate current user
-    if(window.google && google.script && google.script.run){
-      google.script.run.withSuccessHandler(email => { $('currentUser').textContent = email || 'unknown'; }).getActiveUserEmail();
-    } else { $('currentUser').textContent = 'unknown'; }
+/* ---------- basic rendering ---------- */
+function showCard(id){
+  ['dashboardCard','createCard','bagCard','equipmentCard'].forEach(c => {
+    const el = $(c);
+    if (el) el.style.display = (c === id) ? 'block' : 'none';
   });
+  stopScanner();
+}
 
-  // UI helpers
-  function showCard(id){ ['dashboardCard','createCard','bagCard'].forEach(c=> $(c).style.display = (c===id)?'block':'none'); if(id !== 'createCard' && $('createScanner') && $('createScanner').classList.contains('active')) stopScanner(); if(id !== 'bagCard' && $('restockScannerContainer') && $('restockScannerContainer').style.display === 'block') stopScanner(); }
-
-  // refresh data
-  function refreshAll(){
-    loadDashboardData();
-    loadRequiredItems();
-    loadBagList();
-    loadCategories();
-    initRestockRows();
+function updateUserUI(email){
+  const el = $('currentUser');
+  if(email === null || email === undefined){
+    el.textContent = 'Signed Out';
+    ['btnDashboard','btnCreate','btnEquipment','btnRestock'].forEach(id => { const btn = $(id); if(btn) btn.disabled = true; });
+    ['dashboardCard','createCard','bagCard','equipmentCard'].forEach(id => { const card = $(id); if(card) card.style.display = 'none'; });
+  } else {
+    el.textContent = email;
+    ['btnDashboard','btnCreate','btnEquipment','btnRestock'].forEach(id => { const btn = $(id); if(btn) btn.disabled = false; });
   }
+}
 
-  function loadDashboardData(){
-    if(!(window.google && google.script && google.script.run)){ dashboardData = null; renderDashboardItems(); return; }
-    google.script.run.withSuccessHandler(data => { dashboardData = data || {stock:[], required:[], bags:[]}; populateDashboardBagSelect(); renderDashboard(); }).getDashboardData();
-  }
+function refreshAll(){
+  jsonpCall('getDashboardData', null, function(resp){ dashboardData = resp || { stock:[], required:[], bags:[], equipment:[] }; populateDashboardBagSelect(); renderDashboard(); });
+  jsonpCall('getRequiredItems', null, function(resp){ requiredItems = resp || []; populateReqDatalist(); });
+  jsonpCall('getBagList', null, function(resp){ bagList = resp || []; populateBagSelects(); });
+  jsonpCall('getCategories', null, function(resp){ categories = resp || []; populateCategories(); });
+  jsonpCall('getEquipmentLookups', null, function(resp){ equipmentLookups = resp || { types:[], locations:[], statuses:[], serviceReasons:[] }; populateEquipmentLookups(); });
+  initRestockRows();
+}
 
-  function loadRequiredItems(){
-    if(!(window.google && google.script && google.script.run)){ requiredItems = []; populateReqDatalist(); return; }
-    google.script.run.withSuccessHandler(items => { requiredItems = items || []; populateReqDatalist(); }).getRequiredItems();
-  }
-
-  function loadBagList(){
-    if(!(window.google && google.script && google.script.run)){ bagList = []; populateBagSelects(); return; }
-    google.script.run.withSuccessHandler(list => { bagList = list || []; populateBagSelects(); }).getBagList();
-  }
-
-  function loadCategories(){
-    if(!(window.google && google.script && google.script.run)){ categories = []; populateCategories(); return; }
-    google.script.run.withSuccessHandler(cats => { categories = cats || []; populateCategories(); }).getCategories();
-  }
-
-  function populateReqDatalist(){
-    const dl = $('reqList'); if(!dl) return; dl.innerHTML = '';
-    (requiredItems||[]).forEach(it=>{ const o=document.createElement('option'); o.value=it.name; dl.appendChild(o); });
-    $('createItemName').addEventListener('input', function(){ const v=(this.value||'').trim().toLowerCase(); const found=(requiredItems||[]).find(r=> (r.name||'').toLowerCase()===v); if(found) $('createCategory').value = found.category || ''; });
-  }
-
-  function populateCategories(){ const sel = $('createCategory'); if(!sel) return; sel.innerHTML = '<option value="">-- none --</option>'; (categories||[]).forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); }); }
-
-  function populateBagSelects(){ const sel=$('bagSelect'), dash=$('dashboardBagSelect'); [sel,dash].forEach(s=>{ if(!s) return; s.innerHTML='<option value="">-- select --</option>'; (bagList||[]).forEach(b=>{ const o=document.createElement('option'); o.value=b; o.textContent=b; s.appendChild(o); }); }); }
-
-  function populateDashboardBagSelect(){ const sel=$('dashboardBagSelect'); if(!sel) return; sel.innerHTML='<option value="">-- select bag --</option>'; if(dashboardData && dashboardData.bags && dashboardData.bags.length){ dashboardData.bags.forEach(b=>{ const o=document.createElement('option'); o.value=b.bagId || b; o.textContent = b.bagId || b; sel.appendChild(o); }); } }
-
-  // DASHBOARD renderers
-  function onDashboardViewToggle(){ const v=$('dashboardViewSelect').value; $('bagSelectorWrap').style.display = v==='bags' ? 'block' : 'none'; renderDashboard(); }
-  function renderDashboard(){ const view=$('dashboardViewSelect').value||'items'; if(view==='items') renderDashboardItems(); else renderDashboardBags(); }
-
-  function renderDashboardItems(){
-    const body=$('dashboardBody'); const head=$('dashboardHead').querySelector('tr');
-    head.innerHTML = '<th>Item Name</th><th>Barcode</th><th>Lot</th><th>Expiration</th><th>Remaining</th><th>Category</th><th>Status</th>';
-    body.innerHTML = '<tr><td class="small">No data</td></tr>';
-    if(!dashboardData || !dashboardData.stock) return;
-    const hideExpired = $('hideExpired').checked;
-    const rows = dashboardData.stock.filter(r => !(hideExpired && r.status === 'Expired'));
-    if(rows.length===0){ body.innerHTML = '<tr><td colspan="7" class="small">No stock</td></tr>'; return; }
+/* ---------- dashboard ---------- */
+function populateBagSelects(){
+  const sel = $('bagSelect');
+  const dash = $('dashboardBagSelect');
+  [sel, dash].forEach(s => {
+    if(!s) return;
+    const cur = s.value;
+    s.innerHTML = '<option value="">-- select --</option>';
+    (bagList || []).forEach(b => {
+      const o = document.createElement('option');
+      o.value = b; o.textContent = b;
+      s.appendChild(o);
+    });
+    if (cur && bagList.includes(cur)) s.value = cur;
+    else if (s === sel && selectedBag && bagList.includes(selectedBag)) s.value = selectedBag;
+  });
+  if (sel) sel.onchange = function(){ selectedBag = this.value; };
+}
+function populateDashboardBagSelect(){
+  const sel = $('dashboardBagSelect');
+  if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">-- select bag --</option>';
+  (dashboardData && dashboardData.bags || []).forEach(b => {
+    const o = document.createElement('option');
+    o.value = b.bagId || b;
+    o.textContent = b.bagId || b;
+    sel.appendChild(o);
+  });
+  if (cur) sel.value = cur;
+}
+function populateReqDatalist(filterCategory){
+  const dl = $('reqList');
+  if(!dl) return;
+  dl.innerHTML = '';
+  const items = (requiredItems || []).filter(it => !filterCategory || filterCategory === '' || it.category === filterCategory);
+  items.forEach(it => { const o = document.createElement('option'); o.value = it.name; dl.appendChild(o); });
+}
+function populateCategories(){
+  const sel = $('createCategory');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">-- none --</option>';
+  (categories || []).forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+}
+function populateEquipmentLookups(){
+  const typeSel = $('equipmentType'), locSel = $('equipmentLocation'), statusSel = $('equipmentCurrentStatus'), reasonSel = $('equipmentServiceReason');
+  if(typeSel){ const cur = typeSel.value; typeSel.innerHTML = '<option value="">-- select type --</option>'; (equipmentLookups.types || []).forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; typeSel.appendChild(o); }); if(cur) typeSel.value = cur; }
+  if(locSel){ const cur = locSel.value; locSel.innerHTML = '<option value="">-- select location --</option>'; (equipmentLookups.locations || []).forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; locSel.appendChild(o); }); if(cur) locSel.value = cur; }
+  if(statusSel){ const cur = statusSel.value; statusSel.innerHTML = '<option value="">-- select status --</option>'; (equipmentLookups.statuses || []).forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; statusSel.appendChild(o); }); if(cur) statusSel.value = cur; }
+  if(reasonSel){ const cur = reasonSel.value; reasonSel.innerHTML = '<option value="">-- select reason --</option>'; (equipmentLookups.serviceReasons || []).forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; reasonSel.appendChild(o); }); if(cur) reasonSel.value = cur; }
+}
+function onDashboardViewToggle(){
+  const v = $('dashboardViewSelect').value;
+  $('bagSelectorWrap').style.display = v === 'bags' ? 'block' : 'none';
+  renderDashboard();
+}
+function renderDashboard(){
+  const view = $('dashboardViewSelect').value || 'items';
+  if (view === 'items') renderDashboardItems();
+  else if (view === 'equipment') renderDashboardEquipment();
+  else renderDashboardBags();
+}
+function renderDashboardItems(){
+  const body = $('dashboardBody'), head = $('dashboardHead').querySelector('tr');
+  head.innerHTML = '<th>Item Name</th><th>Barcode</th><th>Lot</th><th>Expiration</th><th>Remaining</th><th>Category</th><th>Status</th>';
+  body.innerHTML = '<tr><td class="small">No data</td></tr>';
+  if(!dashboardData || !dashboardData.stock) return;
+  const hideExpired = $('hideExpired').checked;
+  const hideOutOfStock = $('hideOutOfStock').checked;
+  let rows = dashboardData.stock;
+  if(hideExpired) rows = rows.filter(r => r.status !== 'Expired');
+  if(hideOutOfStock) rows = rows.filter(r => r.remaining > 0);
+  if(rows.length === 0){ body.innerHTML = '<tr><td colspan="7" class="small">No stock</td></tr>'; return; }
+  body.innerHTML = '';
+  rows.sort((a,b)=> (a.name||'').localeCompare(b.name||''));
+  rows.forEach(r=>{
+    let status = r.status;
+    if (r.remaining <= 0) status = 'Out of Stock';
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(r.barcode)+'</td><td>'+esc(r.lotNumber)+'</td><td>'+esc(formatDateMMDDYYYY(r.expirationDate))+'</td><td>'+esc(r.remaining)+'</td><td>'+esc(r.category)+'</td><td>'+esc(status)+'</td>';
+    body.appendChild(tr);
+  });
+}
+function renderDashboardEquipment(){
+  const body = $('dashboardBody'), head = $('dashboardHead').querySelector('tr');
+  head.innerHTML = '<th>Barcode</th><th>Equipment Type</th><th>Serial Number</th><th>Make</th><th>Model</th><th>Assigned Location</th><th>Status</th><th>Status Date</th>';
+  body.innerHTML = '<tr><td colspan="8" class="small">No equipment</td></tr>';
+  if(!dashboardData || !dashboardData.equipment) return;
+  const rows = dashboardData.equipment.slice().sort((a,b)=> (a.equipmentType||'').localeCompare(b.equipmentType||'') || (a.barcode||'').localeCompare(b.barcode||''));
+  if(!rows.length){ body.innerHTML = '<tr><td colspan="8" class="small">No equipment</td></tr>'; return; }
+  body.innerHTML = '';
+  rows.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>'+esc(r.barcode)+'</td><td>'+esc(r.equipmentType)+'</td><td>'+esc(r.serialNumber)+'</td><td>'+esc(r.make)+'</td><td>'+esc(r.model)+'</td><td>'+esc(r.assignedLocation)+'</td><td>'+esc(r.status || '')+'</td><td>'+esc(r.statusDate || '')+'</td>';
+    body.appendChild(tr);
+  });
+}
+function renderDashboardBags(){
+  const selectedBag = $('dashboardBagSelect').value;
+  const body = $('dashboardBody'), head = $('dashboardHead').querySelector('tr');
+  head.innerHTML = '<th>Required Item</th><th>Required Qty</th><th>Provided Qty</th><th>Items (exp / lot / qty)</th>';
+  body.innerHTML = '<tr><td colspan="4" class="small">Select a bag</td></tr>';
+  if(!selectedBag) return;
+  jsonpCall('getBagContents', { bagId: selectedBag }, function(results){
     body.innerHTML = '';
-    rows.sort((a,b)=> (a.name||'').localeCompare(b.name||''));
-    rows.forEach(r => {
+    if(!results || !results.length){ body.innerHTML = '<tr><td colspan="4" class="small">No required items</td></tr>'; return; }
+    results.forEach(r=>{
+      const itemsHtml = (r.items||[]).map(it => '<div style="padding:4px 0">'+esc(formatDateMMDDYYYY(it.exp))+' | '+esc(it.lot||'')+' | '+esc(it.qty||0)+'</div>').join('');
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${escapeHTML(r.name)}</td><td>${escapeHTML(r.barcode)}</td><td>${escapeHTML(r.lotNumber)}</td><td>${escapeHTML(r.expirationDate)}</td><td>${escapeHTML(r.remaining)}</td><td>${escapeHTML(r.category)}</td><td>${escapeHTML(r.status)}</td>`;
+      tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(String(r.requiredQty))+'</td><td>'+esc(String(r.providedQty || 0))+'</td><td>'+itemsHtml+'</td>';
       body.appendChild(tr);
     });
+  });
+}
+
+/* ---------- create item ---------- */
+function clearCreateForm(){ $('createItemName').value=''; $('createBarcode').value=''; $('createLot').value=''; $('createExp').value=''; $('createQty').value=1; $('createCategory').value=''; }
+function createItemClient(){
+  disableButton($('createSave'), () => new Promise(resolve => {
+    const payload = {
+      name: ($('createItemName').value || '').trim(),
+      barcode: ($('createBarcode').value || '').trim(),
+      lot: ($('createLot').value || '').trim(),
+      exp: ($('createExp').value || '').trim(),
+      qty: Number($('createQty').value || 0),
+      category: ($('createCategory').value || '').trim()
+    };
+    if(!payload.name){ alert('Item name required'); resolve(); return; }
+    jsonpCall('createItem', payload, function(res){
+      if(!res || res.success === false){ alert((res && res.message) ? res.message : 'Create failed'); resolve(); return; }
+      clearCreateForm();
+      refreshAll();
+      alert(res.message || 'Saved');
+      resolve();
+    });
+  }));
+}
+
+/* ---------- equipment ---------- */
+function clearEquipmentForm(){
+  $('equipmentBarcode').value = '';
+  $('equipmentType').value = '';
+  $('equipmentSerial').value = '';
+  $('equipmentMake').value = '';
+  $('equipmentModel').value = '';
+  $('equipmentLocation').value = '';
+  $('equipmentCurrentStatus').value = '';
+  $('equipmentServiceReason').value = '';
+  $('equipmentComments').value = '';
+  $('equipmentDateShipped').value = '';
+  $('equipmentDateReturned').value = '';
+  $('equipmentInServiceDate').value = '';
+  $('equipmentUpcomingServiceDate').value = '';
+  $('equipmentOOSSection').style.display = 'none';
+  $('equipmentActiveSection').style.display = 'none';
+  setEquipmentLocked(false);
+}
+function setEquipmentLocked(locked){
+  ['equipmentType','equipmentSerial','equipmentMake','equipmentModel'].forEach(id => { const el = $(id); if(el) el.disabled = !!locked; });
+}
+function normalizeEquipmentStatus(v){ return String(v || '').trim().toLowerCase(); }
+function updateEquipmentStatusUI(){
+  const s = normalizeEquipmentStatus($('equipmentCurrentStatus').value);
+  const oos = s === 'oos' || s === 'out of service' || s === 'out-of-service';
+  const active = s === 'active' || s === 'in service' || s === 'in-service';
+
+  $('equipmentOOSSection').style.display = oos ? 'block' : 'none';
+  $('equipmentActiveSection').style.display = active ? 'block' : 'none';
+
+  ['equipmentServiceReason','equipmentComments','equipmentDateShipped'].forEach(id => { const el=$(id); if(el) el.disabled = !oos; });
+  ['equipmentDateReturned','equipmentInServiceDate','equipmentUpcomingServiceDate'].forEach(id => { const el=$(id); if(el) el.disabled = !active; });
+}
+function fillEquipmentForm(rec, lockBasic){
+  $('equipmentBarcode').value = rec.barcode || '';
+  $('equipmentType').value = rec.equipmentType || '';
+  $('equipmentSerial').value = rec.serialNumber || '';
+  $('equipmentMake').value = rec.make || '';
+  $('equipmentModel').value = rec.model || '';
+  $('equipmentLocation').value = rec.assignedLocation || '';
+  $('equipmentCurrentStatus').value = rec.currentStatus || '';
+  $('equipmentServiceReason').value = rec.serviceReason || '';
+  $('equipmentComments').value = rec.comments || '';
+  $('equipmentDateShipped').value = rec.dateShipped || '';
+  $('equipmentDateReturned').value = rec.dateReturned || '';
+  $('equipmentInServiceDate').value = rec.inServiceDate || '';
+  $('equipmentUpcomingServiceDate').value = rec.upcomingServiceDate || '';
+  setEquipmentLocked(!!lockBasic);
+  updateEquipmentStatusUI();
+}
+function searchEquipmentClient(){
+  const q = ($('equipmentBarcode').value || '').trim();
+  if(!q){ alert('Type or scan a barcode first'); return; }
+  jsonpCall('searchEquipment', { q }, function(res){
+    if (res && res.found && res.match) fillEquipmentForm(res.match, true);
+    else { setEquipmentLocked(false); updateEquipmentStatusUI(); }
+  });
+}
+function saveEquipmentClient(){
+  disableButton($('equipmentSave'), () => new Promise(resolve => {
+    const status = $('equipmentCurrentStatus').value || '';
+    const norm = normalizeEquipmentStatus(status);
+    const payload = {
+      equipmentType: ($('equipmentType').value || '').trim(),
+      serialNumber: ($('equipmentSerial').value || '').trim(),
+      make: ($('equipmentMake').value || '').trim(),
+      model: ($('equipmentModel').value || '').trim(),
+      assignedLocation: ($('equipmentLocation').value || '').trim(),
+      currentStatus: status,
+      serviceReason: '',
+      comments: '',
+      dateShipped: '',
+      dateReturned: '',
+      inServiceDate: '',
+      upcomingServiceDate: ''
+    };
+    if(norm === 'oos' || norm === 'out of service' || norm === 'out-of-service'){
+      payload.serviceReason = ($('equipmentServiceReason').value || '').trim();
+      payload.comments = ($('equipmentComments').value || '').trim();
+      payload.dateShipped = ($('equipmentDateShipped').value || '').trim();
+    } else if(norm === 'active' || norm === 'in service' || norm === 'in-service'){
+      payload.dateReturned = ($('equipmentDateReturned').value || '').trim();
+      payload.inServiceDate = ($('equipmentInServiceDate').value || '').trim();
+      payload.upcomingServiceDate = ($('equipmentUpcomingServiceDate').value || '').trim();
+    }
+    if(!payload.equipmentType){ alert('Equipment Type is required'); resolve(); return; }
+    if(!payload.serialNumber){ alert('Serial Number is required'); resolve(); return; }
+    if(!payload.assignedLocation){ alert('Assigned Location is required'); resolve(); return; }
+    jsonpCall('saveEquipment', payload, function(res){
+      if(!res || res.success === false){ alert((res && res.message) ? res.message : 'Equipment save failed'); resolve(); return; }
+      clearEquipmentForm();
+      refreshAll();
+      alert(res.message || 'Equipment saved');
+      resolve();
+    });
+  }));
+}
+
+/* ---------- restock ---------- */
+function initRestockRows(){
+  const tbody = $('restockBody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  addRestockRow();
+  addRestockRow();
+  if (selectedBag) $('bagSelect').value = selectedBag;
+}
+function addRestockRow(){
+  const tbody = $('restockBody');
+  const idx = tbody.querySelectorAll('tr.restockRow').length + 1;
+  const tr = document.createElement('tr');
+  tr.className = 'restockRow';
+  tr.id = 'row-' + idx;
+  tr.innerHTML =
+    '<td data-label="Scan / Lot # / Name"><div class="scanWrap"><input id="scan-'+idx+'" placeholder="Scan barcode or enter lot/name" /><button id="search-'+idx+'" class="btn small secondary">🔍</button><button id="cam-'+idx+'" class="cameraBtn">📷</button></div><div id="matches-'+idx+'"></div></td>'+
+    '<td data-label="Item Name"><input id="nameinp-'+idx+'" /></td>'+
+    '<td data-label="Lot"><input id="lotinp-'+idx+'" /></td>'+
+    '<td data-label="Expiration"><input type="date" id="expinp-'+idx+'" /></td>'+
+    '<td data-label="Category"><input id="catinp-'+idx+'" /></td>'+
+    '<td data-label="Inv Qty"><input id="invqty-'+idx+'" type="number" min="0" value="1" style="width:92px" /><div id="stockinfo-'+idx+'" class="small" style="margin-top:4px"></div></td>'+
+    '<td data-label="Bag Qty"><input id="bagqty-'+idx+'" type="number" min="0" value="1" style="width:92px" /></td>'+
+    '<td data-label="Status"><input id="statusinp-'+idx+'" /></td>';
+  tbody.appendChild(tr);
+  $('search-'+idx).addEventListener('click', ()=> rowLookup(idx));
+  $('scan-'+idx).addEventListener('keydown', ev => { if(ev.key === 'Enter'){ ev.preventDefault(); rowLookup(idx); } });
+  $('cam-'+idx).addEventListener('click', ()=> openRowScanner(idx));
+}
+function openRowScanner(idx){
+  const row = $('row-'+idx);
+  if(!row) return;
+  document.querySelectorAll('.rowScannerContainer').forEach(o => o.remove());
+  stopScanner();
+
+  const container = document.createElement('div');
+  container.className = 'rowScannerContainer readerContainer';
+  container.id = 'rowScannerContainer-'+idx;
+  container.innerHTML =
+    '<div class="scannerBox" id="rowScannerBox-'+idx+'"><div style="color:#fff">Camera preview</div></div>' +
+    '<button class="closeCam" id="rowScannerClose-'+idx+'">✕</button>' +
+    '<div id="rowScannerStatus-'+idx+'" class="statusMsg"></div>';
+  row.parentNode.insertBefore(container, row.nextSibling);
+  $('rowScannerClose-'+idx).addEventListener('click', stopScanner);
+  startScannerHtml5('rowScannerBox-'+idx, 'scan-'+idx, 'rowScannerContainer-'+idx, 'rowScannerStatus-'+idx, 'rowScannerClose-'+idx);
+}
+async function startScannerHtml5(boxId, targetInputId, readerContainerId, statusId, closeBtnId){
+  if(html5QrCode){ await html5QrCode.stop().catch(()=>{}); html5QrCode = null; }
+  const readerContainer = $(readerContainerId), statusEl = $(statusId), closeBtn = $(closeBtnId);
+  if(readerContainer){ readerContainer.style.display = 'block'; readerContainer.classList.add('active'); }
+  if(statusEl) statusEl.textContent = 'Starting camera...';
+  if(closeBtn) closeBtn.style.display = 'none';
+  const box = $(boxId);
+  if(!box) return;
+  box.innerHTML = '';
+  try{
+    html5QrCode = new Html5Qrcode(boxId);
+    await html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (decodedText)=> {
+      handleDetectedCode(decodedText, targetInputId);
+      stopScanner();
+    });
+    if(statusEl) statusEl.textContent = 'Scanning — point camera at barcode';
+    if(closeBtn) closeBtn.style.display = 'inline-block';
+  }catch(err){
+    if(statusEl) statusEl.textContent = 'Camera access denied or failed.';
+    alert('Camera access denied or failed. You can also enter manually.');
+    if(readerContainer){ readerContainer.style.display = 'none'; readerContainer.classList.remove('active'); }
   }
-
-  function renderDashboardBags(){
-    const selectedBag = $('dashboardBagSelect').value;
-    const body = $('dashboardBody');
-    const head = $('dashboardHead').querySelector('tr');
-    head.innerHTML = '<th>Required Item</th><th>Required Qty</th><th>Provided Qty</th><th>Items (exp / lot)</th>';
-    body.innerHTML = '<tr><td colspan="4" class="small">Select a bag</td></tr>';
-    if(!selectedBag) return;
-    if(!(window.google && google.script && google.script.run)){ body.innerHTML='<tr><td colspan="4">Server unavailable</td></tr>'; return; }
-    google.script.run.withSuccessHandler(results=>{
-      body.innerHTML = '';
-      if(!results || results.length===0){ body.innerHTML = '<tr><td colspan="4" class="small">No required items</td></tr>'; return; }
-      results.forEach(r=>{
-        const providedQty = (r.items || []).reduce((s,i)=> s + (Number(i.qty)||0), 0);
-        const itemsHtml = (r.items || []).map(it => `<div style="padding:4px 0">${escapeHTML(it.exp||'')} &nbsp;|&nbsp; ${escapeHTML(it.lot||'')}</div>`).join('');
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${escapeHTML(r.name)}</td><td>${escapeHTML(String(r.requiredQty))}</td><td>${escapeHTML(String(providedQty))}</td><td>${itemsHtml}</td>`;
-        body.appendChild(tr);
-      });
-    }).withFailureHandler(err=>{ console.error(err); body.innerHTML = '<tr><td colspan="4" class="small">Failed to load bag contents</td></tr>'; }).getBagContents(selectedBag);
+}
+function stopScanner(){
+  if(html5QrCode){
+    html5QrCode.stop().then(()=>{ html5QrCode = null; }).catch(()=>{});
   }
-
-  // CREATE item functions
-  function clearCreateForm(){ $('createItemName').value=''; $('createBarcode').value=''; $('createLot').value=''; $('createExp').value=''; $('createQty').value=1; $('createCategory').value=''; $('createScannerStatus').textContent=''; }
-  function createItemClient(){
-    const payload = { name: ($('createItemName').value||'').trim(), barcode: ($('createBarcode').value||'').trim(), lot: ($('createLot').value||'').trim(), exp: ($('createExp').value||'').trim(), qty: Number($('createQty').value||0), category: ($('createCategory').value||'').trim() };
-    if(!payload.name){ alert('Item name required'); return; }
-    if(!(window.google && google.script && google.script.run)){ alert('Server unavailable'); return; }
-    google.script.run.withSuccessHandler(res=>{ if(!res || res.success===false){ alert((res&&res.message)?res.message:'Create failed'); return; } alert('Saved: '+(res.message||'OK')); clearCreateForm(); refreshAll(); }).withFailureHandler(err=>{ console.error(err); alert('createItem failed'); }).createItem(payload);
-  }
-
-  // RESTOCK UI
-  function initRestockRows(){ const tbody = $('restockBody'); if(!tbody) return; tbody.innerHTML=''; addRestockRow(); addRestockRow(); }
-  function addRestockRow(){
-    const tbody = $('restockBody');
-    const idx = tbody.querySelectorAll('tr').length + 1;
-    const tr = document.createElement('tr');
-    tr.className = 'restockRow';
-    tr.id = 'row-'+idx;
-    tr.innerHTML = `
-      <td style="min-width:240px">
-        <div style="display:flex;gap:6px;align-items:center">
-          <input id="scan-${idx}" placeholder="Scan barcode or enter lot/name" />
-          <button id="search-${idx}" class="btn small secondary">🔍</button>
-          <button id="cam-${idx}" class="cameraBtn">📷</button>
-        </div>
-        <div id="matches-${idx}"></div>
-      </td>
-      <td id="name-${idx}" class="col-name"></td>
-      <td id="lot-${idx}" class="col-lot"></td>
-      <td id="exp-${idx}" class="col-exp"></td>
-      <td id="cat-${idx}" class="col-cat"></td>
-      <td><input id="qty-${idx}" type="number" min="0" value="1" style="width:84px" /></td>
-      <td id="status-${idx}" class="col-status"></td>
-    `;
-    tbody.appendChild(tr);
-
-    $('search-'+idx).addEventListener('click', ()=> rowLookup(idx));
-    $('scan-'+idx).addEventListener('keydown', ev=>{ if(ev.key === 'Enter'){ ev.preventDefault(); rowLookup(idx); }});
-    $('cam-'+idx).addEventListener('click', ()=> {
-      // open restock scanner container and start live preview
-      const readerWrap = $('restockScannerContainer');
-      if(readerWrap.style.display === 'block'){ stopScanner(); return; }
-      // show reader and start scanner with target input
-      readerWrap.style.display = 'block';
-      startScanner('restockScannerBox', 'scan-'+idx, 'restockScannerContainer', 'restockScannerStatus', 'restockCloseCam');
+  ['createScanner','equipmentScanner','restockScannerContainer'].forEach(id => { const el=$(id); if(el){ el.style.display='none'; el.classList.remove('active'); } });
+  ['createCloseCam','equipmentCloseCam','restockCloseCam'].forEach(id => { const el=$(id); if(el) el.style.display='none'; });
+  document.querySelectorAll('.rowScannerContainer').forEach(rc => { try{ rc.remove(); }catch(e){} });
+}
+function handleDetectedCode(code, targetInputId){
+  const tgt = $(targetInputId);
+  if(!tgt) return;
+  if(targetInputId === 'createBarcode'){ tgt.value = code; tgt.dataset.scannedBarcode = code; return; }
+  if(targetInputId === 'equipmentBarcode'){ tgt.value = code; tgt.dataset.scannedBarcode = code; searchEquipmentClient(); return; }
+  const m = targetInputId.match(/^scan-(\d+)$/);
+  if(m){
+    const idx = Number(m[1]);
+    jsonpCall('getItem', { q: code, filterInvalid: true }, function(res){
+      if(!res || !res.found || !res.matches || res.matches.length === 0){
+        showInlineAdd(idx, code, true);
+        return;
+      }
+      const codeNorm = String(code || '').trim().toLowerCase();
+      const exact = res.matches.filter(mm => String(mm.barcode || '').trim().toLowerCase() === codeNorm);
+      if(exact.length === 1) applyMatchToRow(idx, exact[0]);
+      else if(exact.length > 1) showMatchesList(idx, exact);
+      else if(res.matches.length === 1) applyMatchToRow(idx, res.matches[0]);
+      else showMatchesList(idx, res.matches);
     });
   }
+}
+function rowLookup(idx){
+  const input = $('scan-'+idx);
+  if(!input) return;
+  const typed = (input.value || '').trim();
+  if(!typed){ alert('Type or scan something first'); return; }
+  const searchVal = input.dataset.scannedBarcode || typed;
+  jsonpCall('getItem', { q: searchVal, filterInvalid: true }, function(res){
+    if(!res || !res.found || !res.matches || res.matches.length === 0){
+      showInlineAdd(idx, searchVal, !!input.dataset.scannedBarcode);
+      return;
+    }
+    const code = String(searchVal || '').trim().toLowerCase();
+    const exact = res.matches.filter(m => String(m.barcode || '').trim().toLowerCase() === code);
+    if(exact.length === 1) applyMatchToRow(idx, exact[0]);
+    else if(exact.length > 1) showMatchesList(idx, exact);
+    else if(res.matches.length === 1) applyMatchToRow(idx, res.matches[0]);
+    else showMatchesList(idx, res.matches);
+  });
+}
+function showMatchesList(idx, matches){
+  const holder = $('matches-'+idx);
+  holder.innerHTML = '';
+  const list = document.createElement('div');
+  list.className = 'matchList';
+  matches.forEach(m => {
+    const item = document.createElement('div');
+    item.className = 'matchItem';
+    item.innerHTML = '<div><strong>'+esc(m.name || '-')+'</strong> — Lot:'+esc(m.lot || '-')+' — Exp:'+esc(formatDateMMDDYYYY(m.exp))+' — Qty:'+esc(m.remaining || 0)+' — Status:'+esc(enhanceStatus(m.status, m.exp))+'</div>';
+    const btn = document.createElement('button');
+    btn.className = 'btn small';
+    btn.textContent = 'Select';
+    btn.addEventListener('click', ()=> applyMatchToRow(idx, m));
+    item.appendChild(btn);
+    list.appendChild(item);
+  });
+  holder.appendChild(list);
+}
+function applyMatchToRow(idx, match){
+  const nameInput = $('nameinp-'+idx), lotInput = $('lotinp-'+idx), expInput = $('expinp-'+idx), catInput = $('catinp-'+idx), statusInput = $('statusinp-'+idx), invQty = $('invqty-'+idx), bagQty = $('bagqty-'+idx), stockInfo = $('stockinfo-'+idx), scanInp = $('scan-'+idx);
+  if(nameInput){ nameInput.value = match.name || ''; nameInput.disabled = true; }
+  if(lotInput){ lotInput.value = match.lot || ''; lotInput.disabled = true; }
+  if(expInput){ expInput.value = match.exp || ''; expInput.disabled = true; }
+  if(catInput){ catInput.value = match.category || ''; catInput.disabled = true; }
+  if(statusInput){ statusInput.value = enhanceStatus(match.status, match.exp) || ''; statusInput.disabled = true; }
+  if(invQty){ invQty.value = String(match.remaining ?? 0); invQty.disabled = true; }
+  if(stockInfo){ stockInfo.textContent = 'In stock: ' + String(match.remaining ?? 0); }
+  if(bagQty){ bagQty.disabled = false; }
+  if(scanInp){
+    scanInp.dataset.row = match.row || '';
+    scanInp.dataset.name = match.name || '';
+    scanInp.dataset.lot = match.lot || '';
+    scanInp.dataset.exp = match.exp || '';
+    scanInp.dataset.category = match.category || '';
+    scanInp.dataset.remaining = String(match.remaining ?? 0);
+    if(match.barcode) scanInp.dataset.barcode = match.barcode;
+    delete scanInp.dataset.scannedBarcode;
+    delete scanInp.dataset.replaceTarget;
+  }
+  const holder = $('matches-'+idx);
+  if(holder) holder.innerHTML = '';
+  maybeAddRow();
+}
+function showInlineAdd(idx, scannedValue, isBarcodeScan){
+  const input = $('scan-'+idx);
+  if(input) input.value = scannedValue;
 
-  function rowLookup(idx){
-    const input = $('scan-'+idx);
-    if(!input) return;
-    const typed = (input.value||'').trim();
-    if(!typed){ alert('Type or scan something first'); return; }
-    const searchVal = input.dataset.scannedBarcode || typed;
-    if(!(window.google && google.script && google.script.run)){ showInlineAdd(idx, searchVal, !!input.dataset.scannedBarcode); return; }
-    google.script.run.withSuccessHandler(res=>{
-      if(!res || !res.found || !res.matches || res.matches.length===0){ showInlineAdd(idx, searchVal, !!input.dataset.scannedBarcode); return; }
-      if(res.matches.length === 1){ applyMatchToRow(idx, res.matches[0]); return; }
-      const holder = $('matches-'+idx); holder.innerHTML = '';
-      const list = document.createElement('div'); list.className='matchList';
-      res.matches.forEach(m => {
-        const item = document.createElement('div'); item.className='matchItem';
-        item.innerHTML = `<div><strong>${escapeHTML(m.name||'-')}</strong> — Lot:${escapeHTML(m.lot||'-')} — Exp:${escapeHTML(m.exp||'-')} — Rem:${escapeHTML(m.remaining||0)}</div>`;
-        const btn = document.createElement('button'); btn.className='btn small'; btn.textContent='Select';
-        btn.addEventListener('click', ()=> applyMatchToRow(idx, m));
-        item.appendChild(btn);
-        list.appendChild(item);
-      });
-      holder.appendChild(list);
-    }).withFailureHandler(err=>{ console.error(err); alert('Lookup failed'); }).getItem(searchVal);
+  const nameInput = $('nameinp-'+idx), lotInput = $('lotinp-'+idx), expInput = $('expinp-'+idx), catInput = $('catinp-'+idx), invQty = $('invqty-'+idx), stockInfo = $('stockinfo-'+idx), bagQty = $('bagqty-'+idx), statusCell = $('status-'+idx);
+  if(nameInput) nameInput.disabled = false;
+  if(lotInput) lotInput.disabled = false;
+  if(expInput) expInput.disabled = false;
+  if(catInput) catInput.disabled = false;
+  if(invQty){ invQty.disabled = false; invQty.value = '1'; }
+  if(stockInfo) stockInfo.textContent = '';
+  if(bagQty) bagQty.disabled = false;
+
+  if(isBarcodeScan){
+    if(nameInput) nameInput.value = '';
+    if(lotInput) lotInput.value = '';
+  } else {
+    const numCount = (scannedValue.match(/[0-9]/g) || []).length;
+    const letterCount = (scannedValue.match(/[A-Za-z]/g) || []).length;
+    const putLot = numCount > letterCount;
+    if(nameInput) nameInput.value = putLot ? '' : scannedValue;
+    if(lotInput) lotInput.value = putLot ? scannedValue : '';
   }
 
-  function applyMatchToRow(idx, match){
-    $('name-'+idx).innerText = match.name || '';
-    $('lot-'+idx).innerText = match.lot || '';
-    $('exp-'+idx).innerText = match.exp || '';
-    $('cat-'+idx).innerText = match.category || '';
-    $('status-'+idx).innerText = match.status || '';
-    const input = $('scan-'+idx);
-    if(input){
-      input.dataset.row = match.row || '';
-      input.dataset.name = match.name || '';
-      input.dataset.lot = match.lot || '';
-      input.dataset.exp = match.exp || '';
-      if(match.barcode) input.dataset.barcode = match.barcode;
-      if(typeof match.remaining !== 'undefined') input.dataset.remaining = String(match.remaining);
-      delete input.dataset.scannedBarcode;
-    }
-    const matchesHolder = $('matches-'+idx); if(matchesHolder) matchesHolder.innerHTML = '';
-    maybeAddRow();
-  }
-
-  function showInlineAdd(idx, scannedValue, isBarcodeScan){
-    const input = $('scan-'+idx);
-    if(input) input.value = scannedValue;
-    const nameCell = $('name-'+idx), lotCell = $('lot-'+idx), expCell = $('exp-'+idx), catCell = $('cat-'+idx), statusCell = $('status-'+idx);
-
-    if(isBarcodeScan){
-      input.dataset.scannedBarcode = scannedValue;
-      nameCell.innerHTML = `<input id="newName-${idx}" placeholder="Item Name">`;
-      lotCell.innerHTML = `<input id="newLot-${idx}" placeholder="Lot">`;
-    } else {
-      const numCount = (scannedValue.match(/[0-9]/g) || []).length;
-      const letterCount = (scannedValue.match(/[A-Za-z]/g) || []).length;
-      const putLot = numCount > letterCount;
-      nameCell.innerHTML = `<input id="newName-${idx}" placeholder="Item Name" value="${putLot ? '' : escapeHTML(scannedValue)}">`;
-      lotCell.innerHTML = `<input id="newLot-${idx}" placeholder="Lot" value="${putLot ? escapeHTML(scannedValue) : ''}">`;
-    }
-    expCell.innerHTML = `<input id="newExp-${idx}" type="date">`;
-    const cats = Array.from(new Set((requiredItems||[]).map(r=>r.category).filter(Boolean)));
-    let catHtml = `<select id="newCat-${idx}"><option value="">(select category)</option>`;
-    cats.forEach(c => catHtml += `<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`);
-    catHtml += `</select>`;
-    catCell.innerHTML = catHtml;
-
-    let replaceHtml = `<div style="margin-top:6px"><label class="small">Replacing which required item?</label><select id="replaceReq-${idx}"><option value="">(select)</option>`;
-    (requiredItems||[]).forEach(r => replaceHtml += `<option value="${escapeHTML(r.name)}" data-cat="${escapeHTML(r.category||'')}">${escapeHTML(r.name)} (${escapeHTML(r.category||'')})</option>`);
-    replaceHtml += `</select></div><div style="margin-top:8px"><button id="addUse-${idx}" class="btn small">Add & Use</button></div>`;
-    statusCell.innerHTML = replaceHtml;
+  if(statusCell){
+    statusCell.innerHTML =
+      '<div style="margin-top:6px"><label class="small">Replacing which required item?</label><select id="replaceReq-'+idx+'"><option value="">(select)</option></select></div>' +
+      '<div style="margin-top:8px"><button id="addUse-'+idx+'" class="btn small">Add & Use</button></div>';
 
     const replaceSel = $('replaceReq-'+idx);
-    if(replaceSel) replaceSel.addEventListener('change', function(){ const opt = this.options[this.selectedIndex]; const cat = opt ? opt.getAttribute('data-cat') : ''; const nc = $('newCat-'+idx); if(nc) nc.value = cat || ''; });
+    replaceSel.innerHTML = '<option value="">(select)</option>';
+    (requiredItems || []).forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.name || '';
+      opt.textContent = (r.name || '') + ' (' + (r.category || '') + ')';
+      replaceSel.appendChild(opt);
+    });
 
-    $('addUse-'+idx).addEventListener('click', ()=> {
-      const newName = ($('newName-'+idx) && $('newName-'+idx).value || '').trim();
-      const newLot = ($('newLot-'+idx) && $('newLot-'+idx).value || '').trim();
-      const newExp = ($('newExp-'+idx) && $('newExp-'+idx).value || '').trim();
-      const replaceTarget = ($('replaceReq-'+idx) && $('replaceReq-'+idx).value || '').trim();
-      const categoryChosen = ($('newCat-'+idx) && $('newCat-'+idx).value || '').trim();
-      const qtyVal = Number($('qty-'+idx).value || 1);
-      if(!newName){ alert('Item name required'); return; }
-      if(!replaceTarget){ alert('Choose required item replaced'); return; }
-      const barcodeToSend = $('scan-'+idx).dataset.scannedBarcode || '';
-      const payload = { name:newName, barcode: barcodeToSend, lot:newLot, exp:newExp, qty: qtyVal, category: categoryChosen || '' };
-      if(!(window.google && google.script && google.script.run)){ alert('Server unavailable'); return; }
-      google.script.run.withSuccessHandler(res=>{
-        if(!res || res.success===false){ alert((res&&res.message)?res.message:'Create failed'); return; }
-        const inp = $('scan-'+idx);
-        if(inp){ inp.dataset.row = res.stockRow || ''; inp.dataset.name = newName; inp.dataset.lot = newLot; inp.dataset.exp = res.exp || newExp || ''; if(payload.barcode) inp.dataset.barcode = payload.barcode; }
-        $('name-'+idx).innerText = newName;
-        $('lot-'+idx).innerText = newLot;
-        $('exp-'+idx).innerText = res.exp || newExp || '';
-        $('cat-'+idx).innerText = res.category || categoryChosen || '';
-        $('status-'+idx).innerText = 'Added';
-        const scanInp = $('scan-'+idx);
-        if(scanInp) scanInp.dataset.replaceTarget = replaceTarget;
-        alert('Item added and ready for Qty Added');
+    replaceSel.addEventListener('change', function(){
+      const opt = this.options[this.selectedIndex];
+      const fullText = opt.textContent || '';
+      const parenIndex = fullText.indexOf(' (');
+      const itemName = parenIndex > -1 ? fullText.substring(0, parenIndex) : fullText;
+      const catMatch = fullText.match(/\((.*)\)$/);
+      const cat = catMatch ? catMatch[1] : '';
+      if (itemName && $('nameinp-'+idx)) $('nameinp-'+idx).value = itemName;
+      if (cat && $('catinp-'+idx)) $('catinp-'+idx).value = cat;
+      if (input) input.dataset.replaceTarget = this.value || '';
+    });
+
+    const addUseBtn = $('addUse-'+idx);
+    addUseBtn.addEventListener('click', function onClick(ev){
+      ev.preventDefault();
+      addUseBtn.disabled = true;
+      const originalText = addUseBtn.textContent;
+      addUseBtn.textContent = '...';
+
+      const newName = (nameInput && nameInput.value || '').trim();
+      const newLot = (lotInput && lotInput.value || '').trim();
+      const newExp = (expInput && expInput.value || '').trim();
+      const replaceTarget = (replaceSel && replaceSel.value || '').trim();
+      const categoryChosen = (catInput && catInput.value || '').trim();
+      const invQtyVal = Number(invQty && invQty.value || 1);
+
+      if(!newName){ alert('Item name required'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
+      if(!replaceTarget){ alert('Choose required item replaced'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
+
+      const barcodeToSend = (input && input.dataset.scannedBarcode) || '';
+      const payload = { name:newName, barcode: barcodeToSend, lot:newLot, exp:newExp, qty: invQtyVal, category: categoryChosen || '' };
+
+      jsonpCall('createItem', payload, function(res){
+        if(!res || res.success===false){
+          alert((res && res.message) ? res.message : 'Create failed');
+          addUseBtn.disabled = false;
+          addUseBtn.textContent = originalText;
+          return;
+        }
+
+        const finalExp = res.exp || newExp;
+        const newStatus = computeStatusFromExp(finalExp);
+
+        if(input){
+          input.dataset.row = res.stockRow || '';
+          input.dataset.name = newName;
+          input.dataset.lot = newLot;
+          input.dataset.exp = finalExp || '';
+          input.dataset.replaceTarget = replaceTarget;
+          if(payload.barcode) input.dataset.barcode = payload.barcode;
+        }
+
+        if(statusInput && $('statusinp-'+idx)) $('statusinp-'+idx).value = newStatus;
+        if(invQty) invQty.disabled = true;
+        if(catInput) catInput.disabled = true;
+        if(nameInput) nameInput.disabled = true;
+        if(lotInput) lotInput.disabled = true;
+        if(expInput) expInput.disabled = true;
+
+        if(statusCell) statusCell.innerHTML = '<input id="statusinp-'+idx+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" value="'+esc(newStatus)+'" disabled />';
+
         const m = $('matches-'+idx); if(m) m.innerHTML = '';
         maybeAddRow();
-        refreshAll();
-      }).withFailureHandler(err=>{ console.error(err); alert('Create failed'); }).createItem(payload);
-    });
+        loadDashboardData();
+      });
+    }, { once: true });
   }
-
-  function maybeAddRow(){
-    const rows = document.querySelectorAll('tr.restockRow');
-    if(rows.length===0){ addRestockRow(); return; }
-    const lastIndex = rows.length;
-    const lastNameCell = $('name-'+lastIndex);
-    if(lastNameCell && lastNameCell.innerText && lastNameCell.innerText.trim() !== '') addRestockRow();
-  }
-
-  function collectEntries(){
-    const bag = $('bagSelect').value || '';
-    if(!bag){ alert('Select a bag first'); return null; }
-    const rows = Array.from(document.querySelectorAll('tr.restockRow'));
-    const entries = [];
-    rows.forEach((r,i)=>{
-      const idx = i+1;
-      const scanField = $('scan-'+idx); if(!scanField) return;
-      const qtyVal = Number($('qty-'+idx).value || 0);
-      const stockRow = scanField.dataset.row || '';
-      const name = scanField.dataset.name || ($('name-'+idx).innerText || '').trim();
-      const barcode = scanField.dataset.barcode || scanField.dataset.scannedBarcode || '';
-      const lot = scanField.dataset.lot || ($('lot-'+idx).innerText || '').trim();
-      const exp = scanField.dataset.exp || ($('exp-'+idx).innerText || '').trim();
-      const category = scanField.dataset.category || ($('cat-'+idx).innerText || '').trim();
-      const status = ($('status-'+idx).innerText || '').trim();
-      const replaceTarget = scanField.dataset.replaceTarget || '';
-      if((stockRow || barcode || name) && qtyVal > 0){
-        entries.push({ bagId: bag, name: name, barcode: barcode, lot: lot, exp: exp, category: category, status: status, qty: qtyVal, row: Number(stockRow) || '', replaceTarget: replaceTarget });
-      }
-    });
-    return entries;
-  }
-
-  function submitAll(){
+}
+function maybeAddRow(){
+  const rows = document.querySelectorAll('tr.restockRow');
+  if(rows.length === 0){ addRestockRow(); return; }
+  const lastIndex = rows.length;
+  const lastNameCell = $('nameinp-'+lastIndex);
+  if(lastNameCell && lastNameCell.value && lastNameCell.value.trim() !== '') addRestockRow();
+}
+function collectEntries(){
+  const bag = $('bagSelect').value || '';
+  if(!bag){ alert('Select a bag first'); return null; }
+  const rows = Array.from(document.querySelectorAll('tr.restockRow'));
+  const entries = [];
+  rows.forEach((r,i) => {
+    const idx = i+1;
+    const scanField = $('scan-'+idx); if(!scanField) return;
+    const qtyVal = Number($('bagqty-'+idx).value || 0);
+    const stockRow = scanField.dataset.row || '';
+    const name = $('nameinp-'+idx) ? $('nameinp-'+idx).value.trim() : (scanField.dataset.name || '');
+    const barcode = scanField.dataset.barcode || scanField.dataset.scannedBarcode || '';
+    const lot = $('lotinp-'+idx) ? $('lotinp-'+idx).value.trim() : (scanField.dataset.lot || '');
+    const exp = $('expinp-'+idx) ? $('expinp-'+idx).value : (scanField.dataset.exp || '');
+    const category = $('catinp-'+idx) ? $('catinp-'+idx).value.trim() : (scanField.dataset.category || '');
+    const status = $('statusinp-'+idx) ? $('statusinp-'+idx).value.trim() : '';
+    const replaceTarget = scanField.dataset.replaceTarget || '';
+    if((stockRow || barcode || name) && qtyVal > 0){
+      entries.push({ bagId: bag, name, barcode, lot, exp, category, status, qty: qtyVal, row: Number(stockRow) || '', replaceTarget });
+    }
+  });
+  return entries;
+}
+function submitAll(){
+  disableButton($('submitAll'), () => new Promise(resolve => {
     const entries = collectEntries();
-    if(entries === null) return;
-    if(entries.length === 0){ alert('No valid items to submit (scan + Qty Added)'); return; }
-    if(!(window.google && google.script && google.script.run)){ alert('Server unavailable — cannot submit'); return; }
-    google.script.run.withSuccessHandler(res=>{ if(!res || res.success===false){ alert((res&&res.message)?res.message:'Submit failed'); return; } alert((res&&res.message)?res.message:'Submitted'); initRestockRows(); refreshAll(); }).withFailureHandler(err=>{ console.error(err); alert('submitBag failed'); }).submitBag(entries);
+    if(entries === null){ resolve(); return; }
+    if(entries.length === 0){ alert('No valid items to submit'); resolve(); return; }
+    jsonpCall('submitBag', entries, function(res){
+      if(!res || res.success===false){ alert((res && res.message) ? res.message : 'Submit failed'); resolve(); return; }
+      alert(res.message || 'Submitted');
+      initRestockRows();
+      refreshAll();
+      resolve();
+    });
+  }));
+}
+
+/* ---------- equipment scanner hooks ---------- */
+$('equipmentSearchBtn').addEventListener('click', searchEquipmentClient);
+$('equipmentSave').addEventListener('click', saveEquipmentClient);
+$('equipmentClear').addEventListener('click', clearEquipmentForm);
+$('equipmentCurrentStatus').addEventListener('change', updateEquipmentStatusUI);
+
+/* ---------- scanner buttons ---------- */
+$('createCameraBtn').addEventListener('click', ()=> {
+  const wrap = $('createScanner');
+  if(wrap.classList.contains('active')) return stopScanner();
+  startScannerHtml5('createScannerBox', 'createBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam');
+});
+$('equipmentCameraBtn').addEventListener('click', ()=> {
+  const wrap = $('equipmentScanner');
+  if(wrap.classList.contains('active')) return stopScanner();
+  startScannerHtml5('equipmentScannerBox', 'equipmentBarcode', 'equipmentScanner', 'equipmentScannerStatus', 'equipmentCloseCam');
+});
+
+/* ---------- refresh ---------- */
+$('btnRefresh').addEventListener('click', function(){
+  disableButton(this, () => new Promise(resolve => {
+    jsonpCall('syncInventoryStock', null, function(){ setTimeout(() => { location.reload(); resolve(); }, 400); });
+  }));
+});
+
+/* ---------- rest of wiring ---------- */
+window.onload = function(){
+  $('btnDashboard').addEventListener('click', ()=> showCard('dashboardCard'));
+  $('btnCreate').addEventListener('click', ()=> showCard('createCard'));
+  $('btnEquipment').addEventListener('click', ()=> showCard('equipmentCard'));
+  $('btnRestock').addEventListener('click', ()=> showCard('bagCard'));
+  $('btnSignOut').addEventListener('click', signOutUser);
+  $('dashboardViewSelect').addEventListener('change', onDashboardViewToggle);
+  $('dashboardBagSelect').addEventListener('change', ()=> renderDashboardBags());
+  $('hideExpired').addEventListener('change', renderDashboard);
+  $('hideOutOfStock').addEventListener('change', renderDashboard);
+  $('createCloseCam').addEventListener('click', stopScanner);
+  $('equipmentCloseCam').addEventListener('click', stopScanner);
+  $('createSave').addEventListener('click', createItemClient);
+  $('createClear').addEventListener('click', clearCreateForm);
+  $('createCategory').addEventListener('change', ()=> populateReqDatalist($('createCategory').value || ''));
+  $('resetRows').addEventListener('click', initRestockRows);
+  $('submitAll').addEventListener('click', submitAll);
+
+  function initGoogle() {
+    if (window.google && google.accounts && google.accounts.id) {
+      google.accounts.id.initialize({
+        client_id: '225540626175-ijteecu232e4sudp76tkdf2tnd7n7gmt.apps.googleusercontent.com',
+        callback: handleSignIn,
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+      google.accounts.id.renderButton(document.getElementById('btnSignIn'), { theme:'outline', size:'medium', text:'signin_with' });
+    } else setTimeout(initGoogle, 200);
   }
+  initGoogle();
 
-  // ---- LIVE SCANNER using getUserMedia + BarcodeDetector ----
-  async function startScanner(boxId, targetInputId, readerContainerId, statusId, closeBtnId){
-    // ensure only one scanner active
-    if(scanning){ stopScanner(); }
-    currentTargetInput = targetInputId;
-    // show container
-    const readerContainer = readerContainerId ? $(readerContainerId) : null;
-    if(readerContainer){ readerContainer.style.display = 'block'; readerContainer.classList.add('active'); }
-    const statusEl = statusId ? $(statusId) : null;
-    if(statusEl) statusEl.textContent = 'Starting camera...';
-
-    // check getUserMedia available
-    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-      if(statusEl) statusEl.textContent = 'Camera not supported in this browser.';
-      alert('Camera not supported in this browser. Use Chrome on desktop or Android for live scanning.');
-      return;
-    }
-
-    // prepare video element inside box
-    const box = $(boxId);
-    if(!box) { if(statusEl) statusEl.textContent = 'Scanner container missing'; return; }
-
-    // create video element if not exists
-    if(!scannerVideo){
-      scannerVideo = document.createElement('video');
-      scannerVideo.className = 'scannerVideo';
-      scannerVideo.autoplay = true;
-      scannerVideo.playsInline = true;
-      scannerVideo.muted = true;
-      scannerVideo.setAttribute('aria-hidden','true');
-      box.innerHTML = '';
-      box.appendChild(scannerVideo);
-    } else {
-      // move video to box if it's elsewhere
-      if(scannerVideo.parentNode !== box){ if(scannerVideo.parentNode) scannerVideo.parentNode.removeChild(scannerVideo); box.appendChild(scannerVideo); }
-    }
-
-    // canvas for detection
-    if(!scannerCanvas){ scannerCanvas = document.createElement('canvas'); scannerCtx = scannerCanvas.getContext('2d'); }
-
-    // prepare BarcodeDetector
-    try{
-      if('BarcodeDetector' in window){
-        try{ barcodeDetector = new BarcodeDetector({formats: ['qr_code','code_128','code_39','ean_13','ean_8','upc_a','upc_e','code_93','itf','data_matrix']}); }
-        catch(e){ barcodeDetector = new BarcodeDetector(); }
+  if (googleToken) {
+    jsonpCall('verifyToken', { token: googleToken }, function(resp) {
+      if (resp && resp.email && resp.email !== 'unknown') {
+        currentUser = resp.email;
+        updateUserUI(resp.email);
+        showCard('dashboardCard');
+        refreshAll();
       } else {
-        barcodeDetector = null;
+        googleToken = null;
+        localStorage.removeItem('als_google_token');
+        updateUserUI(null);
       }
-    }catch(e){
-      console.error('barcodeDetector init failure', e);
-      barcodeDetector = null;
-    }
-
-    if(!barcodeDetector){
-      if(statusEl) statusEl.textContent = 'BarcodeDetector not available in this browser. Use Chrome on desktop or Android for scanning.';
-      alert('This browser does not support BarcodeDetector. Use Chrome (desktop or Android) for live decoding. You can still type barcodes manually.');
-      return;
-    }
-
-    // request camera with rear-facing preference
-    const constraints = { video: { facingMode: { exact: 'environment' } } };
-    const fallbackConstraints = { video: { facingMode: 'environment' } };
-
-    try{
-      scannerStream = await navigator.mediaDevices.getUserMedia(constraints).catch(()=> navigator.mediaDevices.getUserMedia(fallbackConstraints));
-      scannerVideo.srcObject = scannerStream;
-      await scannerVideo.play();
-      if(statusEl) statusEl.textContent = 'Scanning — point camera at barcode';
-      scanning = true;
-      // show close button if provided
-      const closeBtn = closeBtnId ? $(closeBtnId) : null;
-      if(closeBtn) closeBtn.style.display = 'inline-block';
-      scanLoop();
-    }catch(err){
-      console.error('getUserMedia error', err);
-      if(statusEl) statusEl.textContent = 'Camera access denied or failed. Grant permission and reload the app.';
-      alert('Camera access denied or failed. Make sure you opened the deployed web app URL over HTTPS and allowed camera access.');
-      // hide reader container if cannot open camera
-      if(readerContainer){ readerContainer.style.display = 'none'; readerContainer.classList.remove('active'); }
-      // cleanup
-      stopScanner();
-    }
+    });
+  } else {
+    updateUserUI(null);
   }
+};
 
-  async function scanLoop(){
-    if(!scanning || !scannerVideo) return;
-    try{
-      const w = scannerVideo.videoWidth;
-      const h = scannerVideo.videoHeight;
-      if(w && h){
-        scannerCanvas.width = w;
-        scannerCanvas.height = h;
-        scannerCtx.drawImage(scannerVideo, 0, 0, w, h);
-        // detect
-        const detections = await barcodeDetector.detect(scannerCanvas).catch(e => { console.error('detect error', e); return []; });
-        if(detections && detections.length){
-          const code = detections[0].rawValue || detections[0].rawData || detections[0].value || '';
-          if(code){
-            // fill target input
-            if(currentTargetInput){
-              const tgt = $(currentTargetInput);
-              if(tgt){
-                tgt.value = code;
-                tgt.dataset.scannedBarcode = code;
-              }
-            }
-            // if target is a restock row input (scan-N), trigger rowLookup
-            const m = currentTargetInput && currentTargetInput.match(/^scan-(\d+)$/);
-            if(m){ const idx = Number(m[1]); rowLookup(idx); }
-            // stop scanner after a successful read
-            stopScanner();
-            return;
-          }
-        }
-      }
-    }catch(e){ console.error('scanLoop exception', e); }
-    scanRAF = requestAnimationFrame(scanLoop);
+function handleSignIn(response){
+  googleToken = response.credential;
+  localStorage.setItem('als_google_token', googleToken);
+  jsonpCall('verifyToken', { token: googleToken }, function(resp){
+    if (resp && resp.email && resp.email !== 'unknown') {
+      currentUser = resp.email;
+      updateUserUI(resp.email);
+      showCard('dashboardCard');
+      refreshAll();
+    } else {
+      alert('Sign-in failed');
+      googleToken = null;
+      localStorage.removeItem('als_google_token');
+    }
+  });
+}
+function formatDateMMDDYYYY(dateStr){
+  if (!dateStr) return '';
+  if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y,m,d] = dateStr.split('-');
+    return `${m}-${d}-${y}`;
   }
-
-  function stopScanner(){
-    try{
-      scanning = false;
-      currentTargetInput = null;
-      if(scanRAF){ cancelAnimationFrame(scanRAF); scanRAF = null; }
-      if(scannerVideo){
-        try{ scannerVideo.pause(); }catch(e){}
-        if(scannerVideo.srcObject){
-          const tracks = scannerVideo.srcObject.getTracks ? scannerVideo.srcObject.getTracks() : [];
-          tracks.forEach(t => t.stop && t.stop());
-        }
-        if(scannerVideo.parentNode) scannerVideo.parentNode.removeChild(scannerVideo);
-        scannerVideo = null;
-      }
-      if(scannerStream && scannerStream.getTracks) scannerStream.getTracks().forEach(t => t.stop && t.stop());
-      scannerStream = null;
-      // hide scanner containers and close buttons
-      if($('createScanner')){ $('createScanner').style.display = 'none'; $('createScanner').classList.remove('active'); }
-      if($('restockScannerContainer')){ $('restockScannerContainer').style.display = 'none'; $('restockScannerContainer').classList.remove('active'); }
-      if($('createCloseCam')) $('createCloseCam').style.display = 'none';
-      if($('restockCloseCam')) $('restockCloseCam').style.display = 'none';
-    }catch(e){ console.error('stopScanner error', e); }
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}-${d.getFullYear()}`;
+  } catch (e) { return dateStr; }
+}
+function getDaysUntil(expDateStr){
+  if(!expDateStr) return null;
+  try{
+    const [year, month, day] = expDateStr.split('-');
+    const expDate = new Date(Date.UTC(year, month-1, day));
+    const today = new Date();
+    const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    return Math.ceil((expDate - todayUTC) / (1000*60*60*24));
+  }catch(e){ return null; }
+}
+function enhanceStatus(status, expDateStr){
+  if(status === 'Expiring Soon' && expDateStr){
+    const days = getDaysUntil(expDateStr);
+    if(days !== null && days > 0) return `Expiring Soon (${days} days)`;
   }
-
-  // initialize restock rows
-  initRestockRows();
-
-  // expose debug
-  window.__als_debug = { startScanner, stopScanner };
-
-})();
+  return status;
+}
+function computeStatusFromExp(expDateStr){
+  if(!expDateStr) return 'OK';
+  const days = getDaysUntil(expDateStr);
+  if(days === null) return 'OK';
+  if(days < 0) return 'Expired';
+  if(days <= 35) return `Expiring Soon (${days} days)`;
+  return 'OK';
+}
 </script>
 </body>
 </html>
