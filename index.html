@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ALS Inventory — Web App v1.97b</title>
+  <title>ALS Inventory — Web App v1.98</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
@@ -53,7 +53,7 @@
     <div class="brand">
       <img src="https://images.squarespace-cdn.com/content/v1/562e914be4b07324c716280e/1445893787747-ZY45YJQ73Y5V4688H3SD/Citywide%5BNew%5D.gif?format=1000w" alt="logo">
       <div>
-        <div style="font-weight:800">ALS Inventory — Web App v1.97b</div>
+        <div style="font-weight:800">ALS Inventory — Web App v1.98</div>
         <div class="small signedInWrap">
           Signed in as: <span id="currentUser">...</span>
           <div id="btnSignIn"></div>
@@ -296,7 +296,7 @@
   </div>
 
 <script>
-const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbyTyrgDnfkGDKWs4RjbD2kA0OLeQJmMyz0hXCzEKX-qi37A89ZEsFGOAOBGecBh2p5q1Q/exec";
+const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbzbrWWsA7nONsnu62UxKevi9JHu63RO3uoKDiOO9y0VrvNws06Z-Xri36FQ_SO1CdmIyw/exec";
 const $ = id => document.getElementById(id);
 const esc = s => s==null ? "" : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 
@@ -586,15 +586,40 @@ function renderDashboardNarcs(){
   head.innerHTML = '<th>Narc Name</th><th>Barcode</th><th>Lot Number</th><th>Expiration</th><th>Quantity</th><th>Location</th><th>Status</th>';
   body.innerHTML = '<tr><td colspan="7" class="small">No narc stock</td></tr>';
   if(!dashboardData || !dashboardData.narcs) return;
-  const rows = dashboardData.narcs.slice();
-  if(!rows.length){ body.innerHTML = '<tr><td colspan="7" class="small">No narc stock</td></tr>'; return; }
+
+  const hideExpired = $('hideExpired').checked;
+  const hideOutOfStock = $('hideOutOfStock').checked;
+
+  let rows = (dashboardData.narcs || []).filter(r => {
+    const name = String(r.name || '');
+    if (name.includes('[Removed]')) return false;
+    if (hideExpired && r.status === 'Expired') return false;
+    if (hideOutOfStock && Number(r.quantity || 0) <= 0) return false;
+    return true;
+  });
+
+  if(!rows.length){
+    body.innerHTML = '<tr><td colspan="7" class="small">No narc stock</td></tr>';
+    return;
+  }
+
   body.innerHTML = '';
   rows.forEach(r=>{
+    let status = r.status || '';
+    if (Number(r.quantity || 0) <= 0) status = 'Out of Stock';
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(r.barcode)+'</td><td>'+esc(r.lotNumber)+'</td><td>'+esc(formatDateMMDDYYYY(r.expirationDate))+'</td><td>'+esc(r.quantity)+'</td><td>'+esc(r.location)+'</td><td>'+esc(r.status || '')+'</td>';
+    tr.innerHTML =
+      '<td>'+esc(r.name)+'</td>' +
+      '<td>'+esc(r.barcode)+'</td>' +
+      '<td>'+esc(r.lotNumber)+'</td>' +
+      '<td>'+esc(formatDateMMDDYYYY(r.expirationDate))+'</td>' +
+      '<td>'+esc(r.quantity)+'</td>' +
+      '<td>'+esc(r.location)+'</td>' +
+      '<td>'+esc(status)+'</td>';
     body.appendChild(tr);
   });
 }
+
 function renderDashboardKits(){
   const selectedKit = $('dashboardNarcKitSelect').value;
   const body = $('dashboardBody');
