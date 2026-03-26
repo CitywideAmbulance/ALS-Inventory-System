@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ALS Inventory — Web App v1.96c (renewed)</title>
+  <title>ALS Inventory — Web App v1.97</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
@@ -49,7 +49,7 @@
     <div class="brand">
       <img src="https://images.squarespace-cdn.com/content/v1/562e914be4b07324c716280e/1445893787747-ZY45YJQ73Y5V4688H3SD/Citywide%5BNew%5D.gif?format=1000w" alt="logo">
       <div>
-        <div style="font-weight:800">ALS Inventory — Web App v1.96c (renewed)</div>
+        <div style="font-weight:800">ALS Inventory — Web App v1.97</div>
         <div class="small signedInWrap">
           Signed in as: <span id="currentUser">...</span>
           <div id="btnSignIn"></div>
@@ -358,6 +358,12 @@ function showCard(id){
     const el = $(c);
     if(el) el.style.display = (c===id) ? 'block' : 'none';
   });
+  if (id === 'narcoticsCard') {
+    const mode = $('narcMode');
+    if (mode && !mode.value) mode.value = 'create';
+    toggleNarcMode();
+    loadNarcLookups();
+  }
   stopScanner();
 }
 
@@ -412,7 +418,7 @@ function loadRequiredItems(){ jsonpCall('getRequiredItems', null, function(resp)
 function loadBagList(){ jsonpCall('getBagList', null, function(resp){ bagList = resp || []; populateBagSelects(); }); }
 function loadCategories(){ jsonpCall('getCategories', null, function(resp){ categories = resp || []; populateCategories(); }); }
 function loadEquipmentLookups(){ jsonpCall('getEquipmentLookups', null, function(resp){ equipmentLookups = resp || { types:[], locations:[], statuses:[], serviceReasons:[] }; populateEquipmentLookups(); }); }
-function loadNarcLookups(){ jsonpCall('getNarcLookups', { location: $('narcLocation') ? $('narcLocation').value : 'Bronxcare' }, function(resp){ narcLookups = resp || { narcNames:[], narcKits:[] }; populateNarcNameList(); populateNarcKitSelect(); }); }
+function loadNarcLookups(){ jsonpCall('getNarcLookups', { location: $('narcLocation') ? $('narcLocation').value : 'Bronxcare' }, function(resp){ narcLookups = resp || { narcNames:[], narcKits:[] }; populateNarcNameList(); populateNarcKitSelect(); refreshNarcKitRowOptions(); }); }
 
 function populateBagSelects(){
   const sel = $('bagSelect');
@@ -497,6 +503,26 @@ function populateNarcKitSelect(){
   if(!sel) return;
   sel.innerHTML = '<option value="">-- select --</option>';
   (narcLookups.narcKits || []).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = k; sel.appendChild(o); });
+}
+function populateNarcKitNameSelect(sel, selectedValue){
+  if(!sel) return;
+  const items = (narcLookups.narcNames || []);
+  sel.innerHTML = '<option value="">-- select narc --</option>';
+  items.forEach(n => {
+    const o = document.createElement('option');
+    o.value = n;
+    o.textContent = n;
+    sel.appendChild(o);
+  });
+  if(selectedValue && items.some(n => String(n).toLowerCase() === String(selectedValue).toLowerCase())){
+    sel.value = items.find(n => String(n).toLowerCase() === String(selectedValue).toLowerCase()) || '';
+  }
+}
+function refreshNarcKitRowOptions(){
+  document.querySelectorAll('tr.narcKitRow').forEach((row, i) => {
+    const sel = $('nname-' + (i + 1));
+    if(sel) populateNarcKitNameSelect(sel, sel.value || '');
+  });
 }
 
 function onDashboardViewToggle(){
@@ -742,16 +768,23 @@ function saveEquipmentClient(){
 
 function clearNarcForm(){ $('narcBarcode').value=''; $('narcLot').value=''; $('narcExp').value=''; $('narcQty').value=''; $('narcName').value=''; }
 function saveNarcClient(){
-  const payload = { name: $('narcName').value || '', barcode: $('narcBarcode').value || '', lot: $('narcLot').value || '', exp: $('narcExp').value || '', qty: Number($('narcQty').value || 0), location: $('narcLocation').value || '' };
-  jsonpCall('saveNarc', payload, function(res){
-    if(!res || res.success === false){ alert((res && res.message) ? res.message : 'Save failed'); return; }
-    clearNarcForm(); alert(res.message || 'Saved'); refreshAll();
-  });
+  const btn = $('saveNarcBtn');
+  disableButton(btn, () => new Promise((resolve) => {
+    const payload = { name: $('narcName').value || '', barcode: $('narcBarcode').value || '', lot: $('narcLot').value || '', exp: $('narcExp').value || '', qty: Number($('narcQty').value || 0), location: $('narcLocation').value || '' };
+    jsonpCall('saveNarc', payload, function(res){
+      if(!res || res.success === false){ alert((res && res.message) ? res.message : 'Save failed'); resolve(); return; }
+      clearNarcForm(); alert(res.message || 'Saved'); refreshAll(); resolve();
+    });
+  }));
 }
 function toggleNarcMode(){
-  const mode = $('narcMode').value;
-  $('createNarcPanel').style.display = mode === 'create' ? 'block' : 'none';
-  $('narcKitPanel').style.display = mode === 'kit' ? 'block' : 'none';
+  const modeEl = $('narcMode');
+  const mode = modeEl ? modeEl.value : 'create';
+  const createPanel = $('createNarcPanel');
+  const kitPanel = $('narcKitPanel');
+  if(createPanel) createPanel.style.display = mode === 'create' ? 'block' : 'none';
+  if(kitPanel) kitPanel.style.display = mode === 'kit' ? 'block' : 'none';
+  if (mode === 'kit') refreshNarcKitRowOptions();
 }
 
 function initRestockRows(){
@@ -1083,13 +1116,18 @@ function addNarcKitRow(){
   tr.id = 'narcKitRow-' + idx;
   tr.innerHTML =
     '<td data-label="Scan / Lot # / Name"><div class="scanWrap"><input id="nscan-'+idx+'" placeholder="Scan barcode / lot / name" /><button id="nsearch-'+idx+'" class="btn small secondary">🔍</button><button id="ncam-'+idx+'" class="cameraBtn">📷</button></div><div id="nmatch-'+idx+'"></div></td>' +
-    '<td data-label="Narc Name"><input id="nname-'+idx+'"/></td>' +
+    '<td data-label="Narc Name"><select id="nname-'+idx+'"></select></td>' +
     '<td data-label="Lot"><input id="nlot-'+idx+'"/></td>' +
     '<td data-label="Expiration"><input id="nexp-'+idx+'" type="date"/></td>' +
     '<td data-label="Inv Qty"><input id="ninv-'+idx+'" type="number" class="gray" disabled /></td>' +
     '<td data-label="Kit Qty"><input id="nkitqty-'+idx+'" type="number" min="0" value="1"/></td>' +
     '<td data-label="Status"><input id="nstat-'+idx+'" disabled /></td>';
   tbody.appendChild(tr);
+  populateNarcKitNameSelect($('nname-'+idx));
+  $('nname-'+idx).addEventListener('change', function(){
+    const val = (this.value || '').trim();
+    if(val) narcKitLookupByName(idx, val);
+  });
   $('nsearch-'+idx).addEventListener('click', () => narcKitLookup(idx));
   $('nscan-'+idx).addEventListener('keydown', ev => { if(ev.key === 'Enter'){ ev.preventDefault(); narcKitLookup(idx); } });
   $('ncam-'+idx).addEventListener('click', ()=> openNarcKitScanner(idx));
@@ -1111,7 +1149,8 @@ function narcKitLookup(idx){
   const input = $('nscan-'+idx);
   const q = (input.value || '').trim();
   if(!q){ alert('Type or scan something first'); return; }
-  jsonpCall('searchNarcStock', { q }, function(res){
+  const loc = $('narcLocation').value || 'Bronxcare';
+  jsonpCall('searchNarcStock', { q, location: loc }, function(res){
     const holder = $('nmatch-'+idx);
     if(holder) holder.innerHTML = '';
     if(!res || !res.found || !res.matches || res.matches.length === 0){
@@ -1123,6 +1162,24 @@ function narcKitLookup(idx){
     if(exact.length === 1){ applyNarcKitMatch(idx, exact[0]); return; }
     if(exact.length > 1){ showNarcKitMatches(idx, exact); return; }
     if(res.matches.length === 1){ applyNarcKitMatch(idx, res.matches[0]); return; }
+    showNarcKitMatches(idx, res.matches);
+  });
+}
+function narcKitLookupByName(idx, name){
+  const q = String(name || '').trim();
+  if(!q) return;
+  const loc = $('narcLocation').value || 'Bronxcare';
+  jsonpCall('searchNarcStock', { q, location: loc }, function(res){
+    if(!res || !res.found || !res.matches || res.matches.length === 0){
+      showNarcKitInline(idx, q);
+      const nameSel = $('nname-' + idx);
+      if(nameSel) nameSel.value = q;
+      return;
+    }
+    const nameMatches = res.matches.filter(m => String(m.name || '').trim().toLowerCase() === q.toLowerCase());
+    if(nameMatches.length === 1) { applyNarcKitMatch(idx, nameMatches[0]); return; }
+    if(nameMatches.length > 1) { showNarcKitMatches(idx, nameMatches); return; }
+    if(res.matches.length === 1) { applyNarcKitMatch(idx, res.matches[0]); return; }
     showNarcKitMatches(idx, res.matches);
   });
 }
@@ -1153,10 +1210,11 @@ function applyNarcKitMatch(idx, match){
   const stat = $('nstat-' + idx);
   const scan = $('nscan-' + idx);
 
+  populateNarcKitNameSelect(name, match.name);
   if(name){ name.value = match.name || ''; name.disabled = true; }
   if(lot){ lot.value = match.lot || ''; lot.disabled = true; }
   if(exp){ exp.value = match.exp || ''; exp.disabled = true; }
-  if(inv){ inv.value = ''; inv.disabled = true; inv.classList.add('gray'); }
+  if(inv){ inv.value = String(match.qty ?? ''); inv.disabled = true; inv.classList.add('gray'); }
   if(stat){ stat.value = enhanceStatus(match.status, match.exp) || 'OK'; }
 
   if(scan){
@@ -1164,6 +1222,7 @@ function applyNarcKitMatch(idx, match){
     scan.dataset.name = match.name || '';
     scan.dataset.lot = match.lot || '';
     scan.dataset.exp = match.exp || '';
+    scan.dataset.qty = String(match.qty ?? '');
   }
   if($('nmatch-' + idx)) $('nmatch-' + idx).innerHTML = '';
   maybeAddNarcKitRow();
@@ -1176,10 +1235,11 @@ function showNarcKitInline(idx, scannedValue){
   const stat = $('nstat-' + idx);
   const scan = $('nscan-' + idx);
 
-  if(name){ name.disabled = false; name.value = scannedValue; }
-  if(lot){ lot.disabled = false; }
+  populateNarcKitNameSelect(name);
+  if(name){ name.disabled = false; name.value = ''; }
+  if(lot){ lot.disabled = false; lot.value = ''; }
   if(exp){ exp.disabled = false; }
-  if(inv){ inv.disabled = false; inv.classList.remove('gray'); inv.value = ''; }
+  if(inv){ inv.disabled = true; inv.classList.add('gray'); inv.value = ''; }
   if(stat){ stat.value = computeStatusFromExp(exp ? exp.value : ''); }
 
   if(scan){
@@ -1187,10 +1247,17 @@ function showNarcKitInline(idx, scannedValue){
     delete scan.dataset.name;
     delete scan.dataset.lot;
     delete scan.dataset.exp;
+    delete scan.dataset.qty;
   }
 
   if(exp){
     exp.oninput = function(){ if(stat) stat.value = computeStatusFromExp(exp.value || ''); };
+  }
+  if(name){
+    name.onchange = function(){
+      const v = (this.value || '').trim();
+      if(v) narcKitLookupByName(idx, v);
+    };
   }
 }
 function maybeAddNarcKitRow(){
@@ -1204,6 +1271,7 @@ function collectNarcKitEntries(){
   const kitId = $('narcKitSelect').value || '';
   if(!kitId){ alert('Select a Narc Kit ID first'); return null; }
 
+  const location = $('narcLocation').value || 'Bronxcare';
   const rows = Array.from(document.querySelectorAll('tr.narcKitRow'));
   const entries = [];
 
@@ -1220,25 +1288,30 @@ function collectNarcKitEntries(){
     const status = $('nstat-' + idx) ? $('nstat-' + idx).value.trim() : '';
 
     if ((name || barcode || lot) && qty > 0) {
-      entries.push({ kitId, name, barcode, lot, exp, qty, status });
+      entries.push({ kitId, location, name, barcode, lot, exp, qty, status });
     }
   });
 
   return entries;
 }
 function submitNarcKitClient(){
-  const entries = collectNarcKitEntries();
-  if(entries === null) return;
-  if(entries.length === 0){ alert('No valid items to submit'); return; }
-  jsonpCall('submitNarcKit', entries, function(res){
-    if(!res || res.success === false){
-      alert((res && res.message) ? res.message : 'Submit failed');
-      return;
-    }
-    alert(res.message || 'Submitted');
-    initNarcKitRows();
-    refreshAll();
-  });
+  const btn = $('narcKitSubmitAll');
+  disableButton(btn, () => new Promise((resolve) => {
+    const entries = collectNarcKitEntries();
+    if(entries === null){ resolve(); return; }
+    if(entries.length === 0){ alert('No valid items to submit'); resolve(); return; }
+    jsonpCall('submitNarcKit', entries, function(res){
+      if(!res || res.success === false){
+        alert((res && res.message) ? res.message : 'Submit failed');
+        resolve();
+        return;
+      }
+      alert(res.message || 'Submitted');
+      initNarcKitRows();
+      refreshAll();
+      resolve();
+    });
+  }));
 }
 
 window.onload = function(){
@@ -1266,7 +1339,7 @@ window.onload = function(){
   $('equipmentCurrentStatus').addEventListener('change', updateEquipmentStatusUI);
 
   $('narcMode').addEventListener('change', toggleNarcMode);
-  $('narcLocation').addEventListener('change', loadNarcLookups);
+  $('narcLocation').addEventListener('change', function(){ loadNarcLookups(); refreshNarcKitRowOptions(); });
   $('saveNarcBtn').addEventListener('click', saveNarcClient);
   $('clearNarcBtn').addEventListener('click', clearNarcForm);
   $('narcKitResetRows').addEventListener('click', initNarcKitRows);
@@ -1281,6 +1354,10 @@ window.onload = function(){
       jsonpCall('syncInventoryStock', null, function(){ setTimeout(()=>{ location.reload(); resolve(); }, 400); });
     }));
   });
+
+  if ($('narcMode') && !$('narcMode').value) $('narcMode').value = 'create';
+  toggleNarcMode();
+  loadNarcLookups();
 
   function initGoogle() {
     if (window.google && google.accounts && google.accounts.id) {
