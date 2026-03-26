@@ -742,13 +742,11 @@ function saveEquipmentClient(){
 
 function clearNarcForm(){ $('narcBarcode').value=''; $('narcLot').value=''; $('narcExp').value=''; $('narcQty').value=''; $('narcName').value=''; }
 function saveNarcClient(){
-  disableButton(btn, () => new Promise((resolve) => {
   const payload = { name: $('narcName').value || '', barcode: $('narcBarcode').value || '', lot: $('narcLot').value || '', exp: $('narcExp').value || '', qty: Number($('narcQty').value || 0), location: $('narcLocation').value || '' };
   jsonpCall('saveNarc', payload, function(res){
-	if(!res || res.success === false){ alert((res && res.message) ? res.message : 'Save failed'); return; }
-	clearNarcForm(); alert(res.message || 'Saved'); refreshAll();
-	});
-  }
+    if(!res || res.success === false){ alert((res && res.message) ? res.message : 'Save failed'); return; }
+    clearNarcForm(); alert(res.message || 'Saved'); refreshAll();
+  });
 }
 function toggleNarcMode(){
   const mode = $('narcMode').value;
