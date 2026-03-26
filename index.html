@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ALS Inventory — Web App v1.96c renewed</title>
+  <title>ALS Inventory — Web App v1.96c (renewed)</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
@@ -49,7 +49,7 @@
     <div class="brand">
       <img src="https://images.squarespace-cdn.com/content/v1/562e914be4b07324c716280e/1445893787747-ZY45YJQ73Y5V4688H3SD/Citywide%5BNew%5D.gif?format=1000w" alt="logo">
       <div>
-        <div style="font-weight:800">ALS Inventory — Web App v1.96c renewed</div>
+        <div style="font-weight:800">ALS Inventory — Web App v1.96c (renewed)</div>
         <div class="small signedInWrap">
           Signed in as: <span id="currentUser">...</span>
           <div id="btnSignIn"></div>
@@ -513,6 +513,7 @@ function renderDashboard(){
   else if(view === 'kits') renderDashboardKits();
   else renderDashboardBags();
 }
+
 function renderDashboardItems(){
   const body=$('dashboardBody'), head=$('dashboardHead').querySelector('tr');
   head.innerHTML = '<th>Item Name</th><th>Barcode</th><th>Lot</th><th>Expiration</th><th>Remaining</th><th>Category</th><th>Status</th>';
@@ -529,11 +530,13 @@ function renderDashboardItems(){
   rows.forEach(r=>{
     let status = r.status;
     if (r.remaining <= 0) status = 'Out of Stock';
+    else if (status === 'Expiring Soon') status = enhanceStatus(status, r.expirationDate);
     const tr=document.createElement('tr');
     tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(r.barcode)+'</td><td>'+esc(r.lotNumber)+'</td><td>'+esc(formatDateMMDDYYYY(r.expirationDate))+'</td><td>'+esc(r.remaining)+'</td><td>'+esc(r.category)+'</td><td>'+esc(status)+'</td>';
     body.appendChild(tr);
   });
 }
+
 function renderDashboardEquipment(){
   const body = $('dashboardBody');
   const head = $('dashboardHead').querySelector('tr');
@@ -549,44 +552,52 @@ function renderDashboardEquipment(){
     body.appendChild(tr);
   });
 }
+
 function renderDashboardNarcs(){
   const body = $('dashboardBody');
   const head = $('dashboardHead').querySelector('tr');
-  head.innerHTML = '<th>Narc Name</th><th>Barcode</th><th>Lot Number</th><th>Expiration</th><th>Quantity</th><th>Location</th><th>Last Updated</th><th>AddedBy</th>';
-  body.innerHTML = '<tr><td colspan="8" class="small">No narc stock</td></tr>';
+  head.innerHTML = '<th>Narc Name</th><th>Barcode</th><th>Lot Number</th><th>Expiration</th><th>Quantity</th><th>Location</th><th>Status</th>';
+  body.innerHTML = '<tr><td colspan="7" class="small">No narc stock</td></tr>';
   if(!dashboardData || !dashboardData.narcs) return;
   const rows = dashboardData.narcs.slice();
-  if(!rows.length){ body.innerHTML = '<tr><td colspan="8" class="small">No narc stock</td></tr>'; return; }
+  if(!rows.length){ body.innerHTML = '<tr><td colspan="7" class="small">No narc stock</td></tr>'; return; }
   body.innerHTML = '';
   rows.forEach(r=>{
+    const exp = r.expirationDate || '';
+    let status = r.status || 'OK';
+    if (status === 'Expiring Soon') status = enhanceStatus(status, exp);
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(r.barcode)+'</td><td>'+esc(r.lotNumber)+'</td><td>'+esc(formatDateMMDDYYYY(r.expirationDate))+'</td><td>'+esc(r.quantity)+'</td><td>'+esc(r.location)+'</td><td>'+esc(r.lastUpdated)+'</td><td>'+esc(r.addedBy)+'</td>';
+    tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(r.barcode)+'</td><td>'+esc(r.lotNumber)+'</td><td>'+esc(formatDateMMDDYYYY(exp))+'</td><td>'+esc(r.quantity)+'</td><td>'+esc(r.location)+'</td><td>'+esc(status)+'</td>';
     body.appendChild(tr);
   });
 }
+
+
 function renderDashboardKits(){
   const selectedKit = $('dashboardNarcKitSelect').value;
   const body = $('dashboardBody');
   const head = $('dashboardHead').querySelector('tr');
-  head.innerHTML = '<th>Narc Name</th><th>Barcode</th><th>Lot</th><th>Expiration</th><th>Qty</th><th>Status</th>';
-  body.innerHTML = '<tr><td colspan="6" class="small">Select a kit</td></tr>';
+  head.innerHTML = '<th>Narc Name</th><th>Details</th>';
+  body.innerHTML = '<tr><td colspan="2" class="small">Select a kit</td></tr>';
   if(!selectedKit) return;
   jsonpCall('getNarcKitContents', { kitId: selectedKit }, function(results){
     body.innerHTML = '';
     if(!results || !results.length){
-      body.innerHTML = '<tr><td colspan="6" class="small">No kit data</td></tr>';
+      body.innerHTML = '<tr><td colspan="2" class="small">No kit data</td></tr>';
       return;
     }
     results.forEach(r=>{
-      const itemsHtml = (r.items || []).map(it =>
-        '<div style="padding:4px 0">'+esc(it.name||'')+' | '+esc(it.lot||'')+' | '+esc(formatDateMMDDYYYY(it.exp))+' | '+esc(it.qty||0)+' | '+esc(it.status||'')+'</div>'
-      ).join('');
+      const rows = r.items || [];
+      const details = rows.length
+        ? rows.map(it => '<div style="padding:4px 0 4px 18px">'+esc(it.name||'')+' | '+esc(it.lot||'')+' | '+esc(formatDateMMDDYYYY(it.exp))+' | '+esc(it.qty||0)+' | '+esc(it.status||'')+'</div>').join('')
+        : '<div style="padding:4px 0 4px 18px" class="small">No items</div>';
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td colspan="6">'+itemsHtml+'</td>';
+      tr.innerHTML = '<td style="vertical-align:top"><strong>'+esc(r.name || '')+'</strong></td><td style="vertical-align:top">'+details+'</td>';
       body.appendChild(tr);
     });
   });
 }
+
 function renderDashboardBags(){
   const selectedBag = $('dashboardBagSelect').value;
   const body = $('dashboardBody'), head = $('dashboardHead').querySelector('tr');
