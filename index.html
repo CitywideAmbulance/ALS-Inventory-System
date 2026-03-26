@@ -3,11 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ALS Inventory — Web App v1.96c (renewed)</title>
+  <title>ALS Inventory — Web App v1.97</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
-    :root{ --primary:#0b5fff; --on-primary:#fff; --muted:#6b7280; --card:#fff; --border:#e6e9ee; --radius:10px; font-family:Segoe UI,Roboto,Arial; font-size:15px; }
+    :root{
+      --primary:#0b5fff; --on-primary:#fff; --muted:#6b7280; --card:#fff; --border:#e6e9ee; --radius:10px;
+      font-family:Segoe UI,Roboto,Arial; font-size:15px;
+    }
     body{margin:0;background:#fff;color:#0f172a}
     .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
     .brand{display:flex;align-items:center;gap:12px}
@@ -34,11 +37,12 @@
     .matchList{border:1px solid var(--border);border-radius:8px;max-height:260px;overflow:auto;margin-top:8px;background:#fff}
     .matchItem{padding:8px 10px;border-bottom:1px solid #f3f6fb;display:flex;justify-content:space-between;align-items:center;gap:10px}
     .instruction{background:#f0f7ff;border-left:4px solid var(--primary);padding:10px;margin:10px 0;border-radius:0 8px 8px 0;}
+    .instruction p{margin:5px 0;}
     .filter-row{display:flex;gap:24px;margin:16px 0;padding:12px 16px;background:#f9fafc;border-radius:10px;border:1px solid var(--border);align-items:center;flex-wrap:wrap}
     .filter-row label{display:flex;align-items:center;gap:8px;font-weight:500;color:#1e293b}
-    #bagCard .tableWrap td .scanWrap, #narcoticsCard .tableWrap td .scanWrap{display:flex;gap:6px;align-items:center}
-    #bagCard .tableWrap td .scanWrap input, #narcoticsCard .tableWrap td .scanWrap input{flex:1;min-width:0;padding:8px}
-    #bagCard .tableWrap td input[type="number"], #narcoticsCard .tableWrap td input[type="number"]{width:92px}
+    #bagCard .tableWrap td .scanWrap, #narcKitCard .tableWrap td .scanWrap{display:flex;gap:6px;align-items:center}
+    #bagCard .tableWrap td .scanWrap input, #narcKitCard .tableWrap td .scanWrap input{flex:1;min-width:0;padding:8px}
+    #bagCard .tableWrap td input[type="number"], #narcKitCard .tableWrap td input[type="number"]{width:92px}
     .gray { background:#eef2f7; color:#64748b; }
     .rowScannerContainer{border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:8px;background:#fff}
     .signedInWrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -49,7 +53,7 @@
     <div class="brand">
       <img src="https://images.squarespace-cdn.com/content/v1/562e914be4b07324c716280e/1445893787747-ZY45YJQ73Y5V4688H3SD/Citywide%5BNew%5D.gif?format=1000w" alt="logo">
       <div>
-        <div style="font-weight:800">ALS Inventory — Web App v1.96c (renewed)</div>
+        <div style="font-weight:800">ALS Inventory — Web App v1.97</div>
         <div class="small signedInWrap">
           Signed in as: <span id="currentUser">...</span>
           <div id="btnSignIn"></div>
@@ -133,7 +137,7 @@
 
     <div id="equipmentCard" class="card" style="display:none">
       <h3>Equipment Inventory</h3>
-        <div class="instruction">
+	<div class="instruction">
           <p><strong>Instructions:</strong><br>
            • Press the camera icon to scan a barcode or type the lot number/item name and press the search icon in the first column.<br>
 	       • Existing equipment: fields lock and the fields for Assigned Location and Current Status remains editable.<br>
@@ -197,7 +201,6 @@
         • Missing item: fill fields, choose replacement, then click Add & Use.<br>
         • Once you are finished, press <strong>Submit All</strong> and the data will be transfered to the database.
         </p>
-      </div>
       <div style="height:10px"></div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
         <label>Bag</label>
@@ -219,11 +222,11 @@
 
     <div id="narcoticsCard" class="card" style="display:none">
       <h3>Narcotics</h3>
-        <div class="instruction">
+	<div class="instruction">
           <p><strong>Instructions:</strong><br>
            • First, select a <strong>Mode</strong> from the dropdown.<br>
-                - Create Narc is used to add the narc to the overall stock.<br>
-                - Narc Kit Restock is used to move the selected narcs to the designated kit.<br>
+           &nbsp;&nbsp;&nbsp;&nbsp;- Create Narc is used to add the narc to the overall stock.<br>
+           &nbsp;&nbsp;&nbsp;&nbsp;- Narc Kit Restock is used to move the selected narcs to the designated kit.<br>
            • Select a <strong>Location</strong> from the dropdown.<br>
            • Enter the data for each field.<br>
            • Once you are finished, press <strong>Save Narc/Submit All</strong> and the data will be transfered to the database.</p>
@@ -278,7 +281,7 @@
   </div>
 
 <script>
-const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbwaob7pHXoO8nOUFeDtWaMXxWyNK604B6NNuST719_Td-8xDsRe5PcdVJjyDjxFNhH-jg/exec";
+const API_URL = "https://script.google.com/a/macros/citywideambulance.com/s/AKfycbyTyrgDnfkGDKWs4RjbD2kA0OLeQJmMyz0hXCzEKX-qi37A89ZEsFGOAOBGecBh2p5q1Q/exec";
 const $ = id => document.getElementById(id);
 const esc = s => s==null ? "" : String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 
@@ -372,6 +375,7 @@ function updateUserUI(email){
     ['btnDashboard','btnCreate','btnEquipment','btnRestock','btnNarcotics'].forEach(id => { const btn = $(id); if(btn) btn.disabled = false; });
   }
 }
+
 function signOutUser(){
   googleToken = null;
   currentUser = null;
@@ -513,7 +517,6 @@ function renderDashboard(){
   else if(view === 'kits') renderDashboardKits();
   else renderDashboardBags();
 }
-
 function renderDashboardItems(){
   const body=$('dashboardBody'), head=$('dashboardHead').querySelector('tr');
   head.innerHTML = '<th>Item Name</th><th>Barcode</th><th>Lot</th><th>Expiration</th><th>Remaining</th><th>Category</th><th>Status</th>';
@@ -530,13 +533,11 @@ function renderDashboardItems(){
   rows.forEach(r=>{
     let status = r.status;
     if (r.remaining <= 0) status = 'Out of Stock';
-    else if (status === 'Expiring Soon') status = enhanceStatus(status, r.expirationDate);
     const tr=document.createElement('tr');
     tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(r.barcode)+'</td><td>'+esc(r.lotNumber)+'</td><td>'+esc(formatDateMMDDYYYY(r.expirationDate))+'</td><td>'+esc(r.remaining)+'</td><td>'+esc(r.category)+'</td><td>'+esc(status)+'</td>';
     body.appendChild(tr);
   });
 }
-
 function renderDashboardEquipment(){
   const body = $('dashboardBody');
   const head = $('dashboardHead').querySelector('tr');
@@ -552,7 +553,6 @@ function renderDashboardEquipment(){
     body.appendChild(tr);
   });
 }
-
 function renderDashboardNarcs(){
   const body = $('dashboardBody');
   const head = $('dashboardHead').querySelector('tr');
@@ -563,15 +563,11 @@ function renderDashboardNarcs(){
   if(!rows.length){ body.innerHTML = '<tr><td colspan="7" class="small">No narc stock</td></tr>'; return; }
   body.innerHTML = '';
   rows.forEach(r=>{
-    const exp = r.expirationDate || '';
-    let status = r.status || 'OK';
-    if (status === 'Expiring Soon') status = enhanceStatus(status, exp);
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(r.barcode)+'</td><td>'+esc(r.lotNumber)+'</td><td>'+esc(formatDateMMDDYYYY(exp))+'</td><td>'+esc(r.quantity)+'</td><td>'+esc(r.location)+'</td><td>'+esc(status)+'</td>';
+    tr.innerHTML = '<td>'+esc(r.name)+'</td><td>'+esc(r.barcode)+'</td><td>'+esc(r.lotNumber)+'</td><td>'+esc(formatDateMMDDYYYY(r.expirationDate))+'</td><td>'+esc(r.quantity)+'</td><td>'+esc(r.location)+'</td><td>'+esc(r.status || '')+'</td>';
     body.appendChild(tr);
   });
 }
-	
 function renderDashboardKits(){
   const selectedKit = $('dashboardNarcKitSelect').value;
   const body = $('dashboardBody');
@@ -579,14 +575,12 @@ function renderDashboardKits(){
   head.innerHTML = '<th>Narc Name</th><th>Lot Number</th><th>Expiration Date</th><th>Quantity</th><th>Status</th>';
   body.innerHTML = '<tr><td colspan="5" class="small">Select a kit</td></tr>';
   if(!selectedKit) return;
-
   jsonpCall('getNarcKitContents', { kitId: selectedKit }, function(results){
     body.innerHTML = '';
     if(!results || !results.length){
       body.innerHTML = '<tr><td colspan="5" class="small">No kit data</td></tr>';
       return;
     }
-
     results.forEach(r=>{
       if(!r.items || !r.items.length){
         const tr = document.createElement('tr');
@@ -594,7 +588,6 @@ function renderDashboardKits(){
         body.appendChild(tr);
         return;
       }
-
       r.items.forEach(it=>{
         const tr = document.createElement('tr');
         tr.innerHTML =
@@ -608,7 +601,6 @@ function renderDashboardKits(){
     });
   });
 }
-
 function renderDashboardBags(){
   const selectedBag = $('dashboardBagSelect').value;
   const body = $('dashboardBody'), head = $('dashboardHead').querySelector('tr');
@@ -631,7 +623,14 @@ function clearCreateForm(){ $('createItemName').value=''; $('createBarcode').val
 function createItemClient(){
   const btn = $('createSave');
   disableButton(btn, () => new Promise((resolve) => {
-    const payload = { name: ($('createItemName').value||'').trim(), barcode: ($('createBarcode').value||'').trim(), lot: ($('createLot').value||'').trim(), exp: ($('createExp').value||'').trim(), qty: Number($('createQty').value||0), category: ($('createCategory').value||'').trim() };
+    const payload = {
+      name: ($('createItemName').value||'').trim(),
+      barcode: ($('createBarcode').value||'').trim(),
+      lot: ($('createLot').value||'').trim(),
+      exp: ($('createExp').value||'').trim(),
+      qty: Number($('createQty').value||0),
+      category: ($('createCategory').value||'').trim()
+    };
     if(!payload.name){ alert('Item name required'); resolve(); return; }
     jsonpCall('createItem', payload, function(res){
       if(!res || res.success===false){ alert((res && res.message) ? res.message : 'Create failed'); resolve(); return; }
@@ -740,12 +739,30 @@ function saveEquipmentClient(){
   }));
 }
 
-function clearNarcForm(){ $('narcBarcode').value=''; $('narcLot').value=''; $('narcExp').value=''; $('narcQty').value=''; $('narcName').value=''; }
+function clearNarcForm(){
+  $('narcBarcode').value = '';
+  $('narcLot').value = '';
+  $('narcExp').value = '';
+  $('narcQty').value = '';
+  $('narcName').value = '';
+}
 function saveNarcClient(){
-  const payload = { name: $('narcName').value || '', barcode: $('narcBarcode').value || '', lot: $('narcLot').value || '', exp: $('narcExp').value || '', qty: Number($('narcQty').value || 0), location: $('narcLocation').value || '' };
+  const payload = {
+    name: $('narcName').value || '',
+    barcode: $('narcBarcode').value || '',
+    lot: $('narcLot').value || '',
+    exp: $('narcExp').value || '',
+    qty: Number($('narcQty').value || 0),
+    location: $('narcLocation').value || ''
+  };
   jsonpCall('saveNarc', payload, function(res){
-    if(!res || res.success === false){ alert((res && res.message) ? res.message : 'Save failed'); return; }
-    clearNarcForm(); alert(res.message || 'Saved'); refreshAll();
+    if(!res || res.success === false){
+      alert((res && res.message) ? res.message : 'Save failed');
+      return;
+    }
+    clearNarcForm();
+    alert(res.message || 'Saved');
+    refreshAll();
   });
 }
 function toggleNarcMode(){
@@ -779,7 +796,7 @@ function addRestockRow(){
     '<td data-label="Status"><div id="statuswrap-'+idx+'"></div></td>';
   tbody.appendChild(tr);
   $('search-'+idx).addEventListener('click', ()=> rowLookup(idx));
-  $('scan-'+idx).addEventListener('keydown', ev=> { if(ev.key === 'Enter'){ ev.preventDefault(); rowLookup(idx); }});
+  $('scan-'+idx).addEventListener('keydown', ev=> { if(ev.key === 'Enter'){ ev.preventDefault(); rowLookup(idx); } });
   $('cam-'+idx).addEventListener('click', ()=> { openRowScanner(idx); });
 }
 function openRowScanner(idx){
@@ -915,7 +932,15 @@ function updateInlineStatus(idx){
 }
 function showInlineAdd(idx, scannedValue, isBarcodeScan){
   const input = $('scan-'+idx); if(input) input.value = scannedValue;
-  const nameInput = $('nameinp-'+idx), lotInput = $('lotinp-'+idx), expInput = $('expinp-'+idx), catInput = $('catinp-'+idx), invQty = $('invqty-'+idx), stockInfo = $('stockinfo-'+idx), bagQty = $('bagqty-'+idx);
+
+  const nameInput = $('nameinp-'+idx);
+  const lotInput = $('lotinp-'+idx);
+  const expInput = $('expinp-'+idx);
+  const catInput = $('catinp-'+idx);
+  const invQty = $('invqty-'+idx);
+  const stockInfo = $('stockinfo-'+idx);
+  const bagQty = $('bagqty-'+idx);
+
   if(nameInput) nameInput.disabled = false;
   if(lotInput) lotInput.disabled = false;
   if(expInput) expInput.disabled = false;
@@ -974,19 +999,23 @@ function showInlineAdd(idx, scannedValue, isBarcodeScan){
       addUseBtn.disabled = true;
       const originalText = addUseBtn.textContent;
       addUseBtn.textContent = '...';
+
       const newName = (nameInput && nameInput.value || '').trim();
       const newLot = (lotInput && lotInput.value || '').trim();
       const newExp = (expInput && expInput.value || '').trim();
       const replaceTarget = (replaceSel && replaceSel.value || '').trim();
       const categoryChosen = (catInput && catInput.value || '').trim();
       const invQtyVal = Number(invQty && invQty.value || 1);
+
       if(!newName){ alert('Item name required'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
       if(!newLot){ alert('Lot number required'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
       if(!newExp){ alert('Expiration date required'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
       if(!invQtyVal || invQtyVal <= 0){ alert('Inv Qty must be greater than 0'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
       if(!replaceTarget){ alert('Choose required item replaced'); addUseBtn.disabled = false; addUseBtn.textContent = originalText; return; }
+
       const barcodeToSend = (input && input.dataset.scannedBarcode) || '';
       const payload = { name: newName, barcode: barcodeToSend, lot: newLot, exp: newExp, qty: invQtyVal, category: categoryChosen || '' };
+
       jsonpCall('createItem', payload, function(res){
         if(!res || res.success===false){
           alert((res && res.message) ? res.message : 'Create failed');
@@ -994,6 +1023,7 @@ function showInlineAdd(idx, scannedValue, isBarcodeScan){
           addUseBtn.textContent = originalText;
           return;
         }
+
         const finalStatus = computeStatusFromExp(newExp);
         if(input){
           input.dataset.row = res.stockRow || '';
@@ -1003,17 +1033,23 @@ function showInlineAdd(idx, scannedValue, isBarcodeScan){
           input.dataset.replaceTarget = replaceTarget;
           if(payload.barcode) input.dataset.barcode = payload.barcode;
         }
+
         if(nameInput) nameInput.disabled = true;
         if(lotInput) lotInput.disabled = true;
         if(expInput) expInput.disabled = true;
         if(catInput) catInput.disabled = true;
         if(invQty){ invQty.disabled = true; invQty.value=''; invQty.classList.add('gray'); }
+
         const statusWrap = $('statuswrap-'+idx);
         if(statusWrap) statusWrap.innerHTML = '<input id="statusinp-'+idx+'" value="'+esc(finalStatus)+'" disabled style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);" />';
+        const statusInp = $('statusinp-'+idx);
+        if(statusInp) statusInp.value = finalStatus;
+
         if(input){
           input.dataset.finalStatus = finalStatus;
           input.dataset.category = categoryChosen || input.dataset.category || '';
         }
+
         if(stockInfo) stockInfo.textContent = 'Added to inventory';
         const m = $('matches-'+idx); if(m) m.innerHTML = '';
         maybeAddRow();
@@ -1075,6 +1111,17 @@ function initNarcKitRows(){
   addNarcKitRow();
   addNarcKitRow();
 }
+function populateNarcKitNameSelect(sel, preselect){
+  if(!sel) return;
+  sel.innerHTML = '<option value="">-- select --</option>';
+  (narcLookups.narcNames || []).forEach(n => {
+    const o = document.createElement('option');
+    o.value = n;
+    o.textContent = n;
+    sel.appendChild(o);
+  });
+  if(preselect && (narcLookups.narcNames || []).includes(preselect)) sel.value = preselect;
+}
 function addNarcKitRow(){
   const tbody = $('narcKitBody');
   const idx = tbody.querySelectorAll('tr.narcKitRow').length + 1;
@@ -1083,16 +1130,22 @@ function addNarcKitRow(){
   tr.id = 'narcKitRow-' + idx;
   tr.innerHTML =
     '<td data-label="Scan / Lot # / Name"><div class="scanWrap"><input id="nscan-'+idx+'" placeholder="Scan barcode / lot / name" /><button id="nsearch-'+idx+'" class="btn small secondary">🔍</button><button id="ncam-'+idx+'" class="cameraBtn">📷</button></div><div id="nmatch-'+idx+'"></div></td>' +
-    '<td data-label="Narc Name"><input id="nname-'+idx+'"/></td>' +
+    '<td data-label="Narc Name"><select id="nname-'+idx+'"></select></td>' +
     '<td data-label="Lot"><input id="nlot-'+idx+'"/></td>' +
     '<td data-label="Expiration"><input id="nexp-'+idx+'" type="date"/></td>' +
     '<td data-label="Inv Qty"><input id="ninv-'+idx+'" type="number" class="gray" disabled /></td>' +
     '<td data-label="Kit Qty"><input id="nkitqty-'+idx+'" type="number" min="0" value="1"/></td>' +
     '<td data-label="Status"><input id="nstat-'+idx+'" disabled /></td>';
   tbody.appendChild(tr);
+  populateNarcKitNameSelect($('nname-'+idx));
   $('nsearch-'+idx).addEventListener('click', () => narcKitLookup(idx));
   $('nscan-'+idx).addEventListener('keydown', ev => { if(ev.key === 'Enter'){ ev.preventDefault(); narcKitLookup(idx); } });
   $('ncam-'+idx).addEventListener('click', ()=> openNarcKitScanner(idx));
+  $('nname-'+idx).addEventListener('change', function(){
+    const v = this.value || '';
+    const scan = $('nscan-'+idx);
+    if(scan) scan.dataset.name = v;
+  });
 }
 function openNarcKitScanner(idx){
   const row = $('narcKitRow-'+idx);
@@ -1111,7 +1164,9 @@ function narcKitLookup(idx){
   const input = $('nscan-'+idx);
   const q = (input.value || '').trim();
   if(!q){ alert('Type or scan something first'); return; }
-  jsonpCall('searchNarcStock', { q }, function(res){
+
+  const loc = $('narcLocation').value || 'Bronxcare';
+  jsonpCall('searchNarcStock', { q, location: loc }, function(res){
     const holder = $('nmatch-'+idx);
     if(holder) holder.innerHTML = '';
     if(!res || !res.found || !res.matches || res.matches.length === 0){
@@ -1153,6 +1208,7 @@ function applyNarcKitMatch(idx, match){
   const stat = $('nstat-' + idx);
   const scan = $('nscan-' + idx);
 
+  populateNarcKitNameSelect(name, match.name);
   if(name){ name.value = match.name || ''; name.disabled = true; }
   if(lot){ lot.value = match.lot || ''; lot.disabled = true; }
   if(exp){ exp.value = match.exp || ''; exp.disabled = true; }
@@ -1164,6 +1220,7 @@ function applyNarcKitMatch(idx, match){
     scan.dataset.name = match.name || '';
     scan.dataset.lot = match.lot || '';
     scan.dataset.exp = match.exp || '';
+    scan.dataset.qty = match.qty || '';
   }
   if($('nmatch-' + idx)) $('nmatch-' + idx).innerHTML = '';
   maybeAddNarcKitRow();
@@ -1176,7 +1233,15 @@ function showNarcKitInline(idx, scannedValue){
   const stat = $('nstat-' + idx);
   const scan = $('nscan-' + idx);
 
-  if(name){ name.disabled = false; name.value = scannedValue; }
+  populateNarcKitNameSelect(name);
+  if(name){
+    name.disabled = false;
+    if(scannedValue && (narcLookups.narcNames || []).includes(scannedValue)) {
+      name.value = scannedValue;
+    } else {
+      name.value = '';
+    }
+  }
   if(lot){ lot.disabled = false; }
   if(exp){ exp.disabled = false; }
   if(inv){ inv.disabled = false; inv.classList.remove('gray'); inv.value = ''; }
@@ -1206,6 +1271,7 @@ function collectNarcKitEntries(){
 
   const rows = Array.from(document.querySelectorAll('tr.narcKitRow'));
   const entries = [];
+  const loc = $('narcLocation').value || 'Bronxcare';
 
   rows.forEach((r, i) => {
     const idx = i + 1;
@@ -1220,25 +1286,30 @@ function collectNarcKitEntries(){
     const status = $('nstat-' + idx) ? $('nstat-' + idx).value.trim() : '';
 
     if ((name || barcode || lot) && qty > 0) {
-      entries.push({ kitId, name, barcode, lot, exp, qty, status });
+      entries.push({ kitId, location: loc, name, barcode, lot, exp, qty, status });
     }
   });
 
   return entries;
 }
 function submitNarcKitClient(){
-  const entries = collectNarcKitEntries();
-  if(entries === null) return;
-  if(entries.length === 0){ alert('No valid items to submit'); return; }
-  jsonpCall('submitNarcKit', entries, function(res){
-    if(!res || res.success === false){
-      alert((res && res.message) ? res.message : 'Submit failed');
-      return;
-    }
-    alert(res.message || 'Submitted');
-    initNarcKitRows();
-    refreshAll();
-  });
+  const btn = $('narcKitSubmitAll');
+  disableButton(btn, () => new Promise((resolve) => {
+    const entries = collectNarcKitEntries();
+    if(entries === null){ resolve(); return; }
+    if(entries.length === 0){ alert('No valid items to submit'); resolve(); return; }
+    jsonpCall('submitNarcKit', entries, function(res){
+      if(!res || res.success === false){
+        alert((res && res.message) ? res.message : 'Submit failed');
+        resolve();
+        return;
+      }
+      alert(res.message || 'Submitted');
+      initNarcKitRows();
+      refreshAll();
+      resolve();
+    });
+  }));
 }
 
 window.onload = function(){
@@ -1272,10 +1343,21 @@ window.onload = function(){
   $('narcKitResetRows').addEventListener('click', initNarcKitRows);
   $('narcKitSubmitAll').addEventListener('click', submitNarcKitClient);
 
-  $('createCameraBtn').addEventListener('click', ()=> { const wrap = $('createScanner'); if(wrap.classList.contains('active')) return stopScanner(); startScannerHtml5('createScannerBox', 'createBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam'); });
-  $('equipmentCameraBtn').addEventListener('click', ()=> { const wrap = $('equipmentScanner'); if(wrap.classList.contains('active')) return stopScanner(); startScannerHtml5('equipmentScannerBox', 'equipmentBarcode', 'equipmentScanner', 'equipmentScannerStatus', 'equipmentCloseCam'); });
-  $('narcCameraBtn').addEventListener('click', ()=> { if($('narcBarcode')) $('narcBarcode').focus(); startScannerHtml5('createScannerBox', 'narcBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam'); });
-
+  $('createCameraBtn').addEventListener('click', ()=> {
+    const wrap = $('createScanner');
+    if(wrap.classList.contains('active')) return stopScanner();
+    startScannerHtml5('createScannerBox', 'createBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam');
+  });
+  $('equipmentCameraBtn').addEventListener('click', ()=> {
+    const wrap = $('equipmentScanner');
+    if(wrap.classList.contains('active')) return stopScanner();
+    startScannerHtml5('equipmentScannerBox', 'equipmentBarcode', 'equipmentScanner', 'equipmentScannerStatus', 'equipmentCloseCam');
+  });
+  $('narcCameraBtn').addEventListener('click', ()=> {
+    const wrap = $('createScanner');
+    if(wrap.classList.contains('active')) return stopScanner();
+    startScannerHtml5('createScannerBox', 'narcBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam');
+  });
   $('btnRefresh').addEventListener('click', function(){
     disableButton(this, () => new Promise((resolve) => {
       jsonpCall('syncInventoryStock', null, function(){ setTimeout(()=>{ location.reload(); resolve(); }, 400); });
