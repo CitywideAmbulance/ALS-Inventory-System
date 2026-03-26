@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ALS Inventory — Web App v1.97</title>
+  <title>ALS Inventory — Web App v1.97b</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
@@ -53,7 +53,7 @@
     <div class="brand">
       <img src="https://images.squarespace-cdn.com/content/v1/562e914be4b07324c716280e/1445893787747-ZY45YJQ73Y5V4688H3SD/Citywide%5BNew%5D.gif?format=1000w" alt="logo">
       <div>
-        <div style="font-weight:800">ALS Inventory — Web App v1.97</div>
+        <div style="font-weight:800">ALS Inventory — Web App v1.97b</div>
         <div class="small signedInWrap">
           Signed in as: <span id="currentUser">...</span>
           <div id="btnSignIn"></div>
@@ -108,7 +108,14 @@
     <div id="createCard" class="card" style="display:none">
       <h3>Create Inventory Item</h3>
       <div class="instruction">
-        <p><strong>How to add a new item:</strong> Select a category, enter the item name, scan or type the barcode (if available), type the lot number, choose an expiration date, and enter the quantity you are adding to stock. Then click <strong>Save item</strong>.</p>
+        <p><strong>Instructions:</strong>
+         • Select a <strong>Category</strong> from the dropdown.<br>
+         • Select an <strong>Item</strong> from the dropdown.<br>
+         • Press the camera icon to scan or type the Barcode (if available).<br>
+         • Type the Lot number (if available).<br>
+         • Choose an Expiration date (if available).<br>
+         • Enter the Quantity you are adding to stock.<br>
+         • Once you are finished, press <strong>Save item</strong> and the data will be transfered to the database.</p>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
         <div><label>Category</label><select id="createCategory"><option value="">-- none --</option></select></div>
@@ -130,6 +137,17 @@
 
     <div id="equipmentCard" class="card" style="display:none">
       <h3>Equipment Inventory</h3>
+        <div class="instruction">
+          <p><strong>Instructions:</strong>
+           • Press the camera icon to scan a barcode or type the lot number/item name and press the search icon in the first column.<br>
+	         • Existing equipment: fields lock and the fields for Assigned Location and Current Status remains editable.<br>
+           • Missing item: fill fields.<br>
+           • Select a <strong>Location</strong> from the dropdown.<br>
+	         • Select a <strong>Status</strong> from the dropdown.<br>
+           &nbsp;&nbsp;&nbsp;&nbsp;- Active status will have new fields appear for date returned, in-service date, and upcoming service date.<br>
+           &nbsp;&nbsp;&nbsp;&nbsp;- OOS status will have new fields appear for the service reason, comments, and date shipped.<br>
+           • Once you are finished, press <strong>Save Equipment</strong> and the data will be transfered to the database.</p>
+        </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
         <div>
           <label>Barcode</label>
@@ -178,9 +196,11 @@
       <div class="instruction">
         <p><strong>Instructions:</strong><br>
         • First, select a bag number from the dropdown above the table.<br>
-        • Scan or type a barcode/lot number/item name in the first column.<br>
+        • Press the camera icon to scan a barcode or type the lot number/item name and press the search icon in the first column.<br>
         • Existing item: fields lock and Bag Qty remains editable.<br>
-        • Missing item: fill fields, choose replacement, then click Add & Use.</p>
+        • Missing item: fill fields, choose replacement, then click Add & Use.<br>
+        • Once you are finished, press <strong>Submit All</strong> and the data will be transfered to the database.
+        </p>
       </div>
       <div style="height:10px"></div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
@@ -203,6 +223,15 @@
 
     <div id="narcoticsCard" class="card" style="display:none">
       <h3>Narcotics</h3>
+        <div class="instruction">
+          <p><strong>Instructions:</strong>
+           • First, select a <strong>Mode</strong> from the dropdown.<br>
+           &nbsp;&nbsp;&nbsp;&nbsp;- Create Narc is used to add the narc to the overall stock.<br>
+           &nbsp;&nbsp;&nbsp;&nbsp;- Narc Kit Restock is used to move the selected narcs to the designated kit.<br>
+           • Select a <strong>Location</strong> from the dropdown.<br>
+           • Enter the data for each field.<br>
+           • Once you are finished, press <strong>Save Narc/Submit All</strong> and the data will be transfered to the database.</p>
+        </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
         <div>
           <label>Mode</label>
