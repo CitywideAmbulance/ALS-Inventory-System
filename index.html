@@ -1501,7 +1501,6 @@ function collectNarcKitEntries(){
 
   const rows = Array.from(document.querySelectorAll('tr.narcKitRow'));
   const entries = [];
-  let rowNo = 1;
   const loc = $('narcLocation').value || 'Bronxcare';
 
   rows.forEach((r, i) => {
@@ -1510,7 +1509,6 @@ function collectNarcKitEntries(){
     if(!scan) return;
 
     const qty = Number($('nkitqty-' + idx).value || 0);
-    const unitCount = Math.max(0, Math.floor(qty));
     const name = $('nname-' + idx) ? $('nname-' + idx).value.trim() : '';
     const barcode = scan.dataset.barcode || '';
     const lot = $('nlot-' + idx) ? $('nlot-' + idx).value.trim() : '';
@@ -1518,21 +1516,19 @@ function collectNarcKitEntries(){
     const status = $('nstat-' + idx) ? $('nstat-' + idx).value.trim() : '';
 
     if ((name || barcode || lot) && qty > 0) {
-      for(let unitIndex = 1; unitIndex <= unitCount; unitIndex += 1){
+      for(let unit = 1; unit <= qty; unit += 1){
         entries.push({
           kitId,
           location: loc,
-          rowNo: rowNo++,
-          sourceRow: idx,
           name,
           barcode,
           lot,
           exp,
           qty: 1,
           status,
+          sourceRow: idx,
           sourceQty: qty,
-          unitIndex,
-          splitFromQty: true
+          sourceUnit: unit
         });
       }
     }
@@ -1559,101 +1555,7 @@ function submitNarcKitClient(){
     });
   }));
 }
-
-window.onload = function(){
-  $('btnDashboard').addEventListener('click', ()=> showCard('dashboardCard'));
-  $('btnCreate').addEventListener('click', ()=> showCard('createCard'));
-  $('btnEquipment').addEventListener('click', ()=> showCard('equipmentCard'));
-  $('btnRestock').addEventListener('click', ()=> showCard('bagCard'));
-  $('btnNarcotics').addEventListener('click', ()=> showCard('narcoticsCard'));
-  $('btnSignOut').addEventListener('click', signOutUser);
-  $('dashboardViewSelect').addEventListener('change', onDashboardViewToggle);
-  $('dashboardBagSelect').addEventListener('change', ()=> renderDashboardBags());
-  $('dashboardNarcKitSelect').addEventListener('change', ()=> renderDashboardKits());
-  if($('narcVerifySelect')) $('narcVerifySelect').addEventListener('change', ()=> loadNarcVerifyRows());
-  $('hideExpired').addEventListener('change', renderDashboard);
-  $('hideOutOfStock').addEventListener('change', renderDashboard);
-  $('createCloseCam').addEventListener('click', stopScanner);
-  $('equipmentCloseCam').addEventListener('click', stopScanner);
-  $('createSave').addEventListener('click', createItemClient);
-  $('createClear').addEventListener('click', clearCreateForm);
-  $('createCategory').addEventListener('change', ()=> populateReqDatalist($('createCategory').value || ''));
-  $('resetRows').addEventListener('click', initRestockRows);
-  $('submitAll').addEventListener('click', submitAll);
-  $('equipmentSearchBtn').classList.add('searchActionBtn');
-  $('equipmentSearchBtn').addEventListener('click', searchEquipmentClient);
-  $('equipmentSave').addEventListener('click', saveEquipmentClient);
-  $('equipmentClear').addEventListener('click', clearEquipmentForm);
-  $('equipmentCurrentStatus').addEventListener('change', updateEquipmentStatusUI);
-
-  $('narcMode').addEventListener('change', function(){ toggleNarcMode(); if(this.value === 'verify') loadNarcVerifyRows(); });
-  $('narcLocation').addEventListener('change', loadNarcLookups);
-  $('saveNarcBtn').addEventListener('click', saveNarcClient);
-  $('clearNarcBtn').addEventListener('click', clearNarcForm);
-  $('narcKitResetRows').addEventListener('click', initNarcKitRows);
-  $('narcKitSubmitAll').addEventListener('click', submitNarcKitClient);
-  if($('narcVerifyResetRows')) $('narcVerifyResetRows').addEventListener('click', loadNarcVerifyRows);
-  if($('narcVerifySubmitAll')) $('narcVerifySubmitAll').addEventListener('click', submitNarcVerifyClient);
-
-  $('createCameraBtn').addEventListener('click', ()=> {
-    const wrap = $('createScanner');
-    if(wrap.classList.contains('active')) return stopScanner();
-    startScannerHtml5('createScannerBox', 'createBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam');
-  });
-  $('equipmentCameraBtn').addEventListener('click', ()=> {
-    const wrap = $('equipmentScanner');
-    if(wrap.classList.contains('active')) return stopScanner();
-    startScannerHtml5('equipmentScannerBox', 'equipmentBarcode', 'equipmentScanner', 'equipmentScannerStatus', 'equipmentCloseCam');
-  });
-  $('narcCameraBtn').addEventListener('click', ()=> {
-    const wrap = $('createScanner');
-    if(wrap.classList.contains('active')) return stopScanner();
-    startScannerHtml5('createScannerBox', 'narcBarcode', 'createScanner', 'createScannerStatus', 'createCloseCam');
-  });
-  $('btnRefresh').addEventListener('click', function(){
-    disableButton(this, () => new Promise((resolve) => {
-      jsonpCall('syncInventoryStock', null, function(){ setTimeout(()=>{ location.reload(); resolve(); }, 400); });
-    }));
-  });
-
-  if ($('narcMode') && !$('narcMode').value) $('narcMode').value = 'create';
-  toggleNarcMode();
-  loadNarcLookups();
-
-  function initGoogle() {
-    if (window.google && google.accounts && google.accounts.id) {
-      try {
-        google.accounts.id.initialize({
-          client_id: '225540626175-ijteecu232e4sudp76tkdf2tnd7n7gmt.apps.googleusercontent.com',
-          callback: handleSignIn,
-          auto_select: false,
-          cancel_on_tap_outside: true
-        });
-        google.accounts.id.renderButton(document.getElementById('btnSignIn'), { theme: 'outline', size: 'medium', text: 'signin_with' });
-      } catch (e) { console.error('Google init error:', e); }
-    } else {
-      setTimeout(initGoogle, 200);
-    }
-  }
-  initGoogle();
-
-  if(googleToken){
-    jsonpCall('verifyToken', { token: googleToken }, function(resp){
-      if(resp && resp.email && resp.email !== 'unknown'){
-        currentUser = resp.email;
-        updateUserUI(resp.email);
-        showCard('dashboardCard');
-        refreshAll();
-      }else{
-        googleToken = null;
-        localStorage.removeItem('als_google_token');
-        updateUserUI(null);
-      }
-    });
-  }else{
-    updateUserUI(null);
-  }
-};
+;
 </script>
 </body>
 </html>
