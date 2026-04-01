@@ -29,6 +29,26 @@
     thead th{background:#f3f6fb;padding:10px;text-align:left;position:sticky;top:0;z-index:1}
     th,td{padding:10px;border-bottom:1px solid #eef0f4;vertical-align:top}
     .cameraBtn{background:#f3f6fb;border:1px solid var(--border);padding:8px;border-radius:8px;cursor:pointer}
+    .searchActionBtn{min-width:96px;position:relative;overflow:hidden}
+    .searchBusy{pointer-events:none;opacity:0.9}
+    .searchBusy::after{
+      content:"";
+      position:absolute;
+      left:0;
+      bottom:0;
+      height:3px;
+      width:100%;
+      background:linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.95) 50%, transparent 100%);
+      animation:searchSweep 1s linear infinite;
+    }
+    @keyframes searchSweep{
+      0%{transform:translateX(-100%)}
+      100%{transform:translateX(100%)}
+    }
+    @keyframes spin{
+      from{transform:rotate(0deg)}
+      to{transform:rotate(360deg)}
+    }
     .readerContainer{margin-top:8px;display:none;position:relative}
     .readerContainer.active{display:block}
     .scannerBox{width:100%;max-width:720px;height:auto;border-radius:8px;overflow:hidden;background:#000;display:flex;align-items:center;justify-content:center}
@@ -153,7 +173,7 @@
           <label>Barcode</label>
           <div style="display:flex;gap:8px">
             <input id="equipmentBarcode" placeholder="Scan or type barcode" />
-            <button id="equipmentSearchBtn" class="btn small secondary">🔍</button>
+            <button id="equipmentSearchBtn" class="btn small secondary searchActionBtn">🔍</button>
             <button id="equipmentCameraBtn" class="cameraBtn">📷</button>
           </div>
           <div id="equipmentScanner" class="readerContainer">
@@ -352,6 +372,41 @@ function disableButton(btn, callback){
   btn.textContent = '...';
   const restore = () => { btn.disabled = false; btn.textContent = originalText; };
   Promise.resolve(callback()).finally(restore).catch(restore);
+}
+
+function setSearchBusy(btn, busy){
+  if(!btn) return;
+  if(busy){
+    if(!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.classList.add('searchBusy');
+    btn.setAttribute('aria-busy', 'true');
+    btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px">Searching<span style="display:inline-block;width:10px;height:10px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></span></span>';
+  }else{
+    if(btn.dataset.originalHtml !== undefined) btn.innerHTML = btn.dataset.originalHtml;
+    btn.disabled = false;
+    btn.classList.remove('searchBusy');
+    btn.removeAttribute('aria-busy');
+  }
+}
+
+function withSearchBusy(btn, work){
+  setSearchBusy(btn, true);
+  let finished = false;
+  const done = () => {
+    if(finished) return;
+    finished = true;
+    setSearchBusy(btn, false);
+  };
+  try{
+    const result = work(done);
+    if(result && typeof result.then === 'function'){
+      result.finally(done);
+    }
+  }catch(err){
+    done();
+    throw err;
+  }
 }
 
 function jsonpCall(action, data, cb){
@@ -744,11 +799,18 @@ function fillEquipmentForm(rec, lockBasic){
   updateEquipmentStatusUI();
 }
 function searchEquipmentClient(){
+  const btn = $('equipmentSearchBtn');
   const q = ($('equipmentBarcode').value || '').trim();
   if(!q){ alert('Type or scan a barcode first'); return; }
-  jsonpCall('searchEquipment', { q }, function(res){
-    if(res && res.found && res.match) fillEquipmentForm(res.match, true);
-    else { setEquipmentLocked(false); updateEquipmentStatusUI(); }
+  withSearchBusy(btn, (done) => {
+    jsonpCall('searchEquipment', { q }, function(res){
+      try{
+        if(res && res.found && res.match) fillEquipmentForm(res.match, true);
+        else { setEquipmentLocked(false); updateEquipmentStatusUI(); }
+      }finally{
+        done();
+      }
+    });
   });
 }
 function saveEquipmentClient(){
@@ -938,7 +1000,7 @@ function addRestockRow(){
   tr.className='restockRow';
   tr.id='row-'+idx;
   tr.innerHTML =
-    '<td data-label="Scan / Lot # / Name"><div class="scanWrap"><input id="scan-'+idx+'" placeholder="Scan barcode or enter lot/name" /><button id="search-'+idx+'" class="btn small secondary">🔍</button><button id="cam-'+idx+'" class="cameraBtn">📷</button></div><div id="matches-'+idx+'"></div></td>' +
+    '<td data-label="Scan / Lot # / Name"><div class="scanWrap"><input id="scan-'+idx+'" placeholder="Scan barcode or enter lot/name" /><button id="search-'+idx+'" class="btn small secondary searchActionBtn">🔍</button><button id="cam-'+idx+'" class="cameraBtn">📷</button></div><div id="matches-'+idx+'"></div></td>' +
     '<td data-label="Item Name"><input id="nameinp-'+idx+'" /></td>' +
     '<td data-label="Lot"><input id="lotinp-'+idx+'" /></td>' +
     '<td data-label="Expiration"><input type="date" id="expinp-'+idx+'" /></td>' +
@@ -1013,20 +1075,27 @@ function handleDetectedCode(code, targetInputId){
 }
 
 function rowLookup(idx){
+  const btn = $('search-'+idx);
   const input = $('scan-'+idx); if(!input) return;
   const typed = (input.value||'').trim(); if(!typed){ alert('Type or scan something first'); return; }
   const searchVal = input.dataset.scannedBarcode || typed;
-  jsonpCall('getItem', { q: searchVal, filterInvalid: false }, function(res){
-    if(!res || !res.found || !res.matches || res.matches.length===0){
-      showInlineAdd(idx, searchVal, !!input.dataset.scannedBarcode);
-      return;
-    }
-    const code = String(searchVal||'').toString().trim().toLowerCase();
-    const exactMatches = res.matches.filter(m => String(m.barcode||'').toString().trim().toLowerCase() === code);
-    if(exactMatches.length === 1){ applyMatchToRow(idx, exactMatches[0]); return; }
-    if(exactMatches.length > 1){ showMatchesList(idx, exactMatches); return; }
-    if(res.matches.length === 1){ applyMatchToRow(idx, res.matches[0]); return; }
-    showMatchesList(idx, res.matches);
+  withSearchBusy(btn, (done) => {
+    jsonpCall('getItem', { q: searchVal, filterInvalid: false }, function(res){
+      try{
+        if(!res || !res.found || !res.matches || res.matches.length===0){
+          showInlineAdd(idx, searchVal, !!input.dataset.scannedBarcode);
+          return;
+        }
+        const code = String(searchVal||'').toString().trim().toLowerCase();
+        const exactMatches = res.matches.filter(m => String(m.barcode||'').toString().trim().toLowerCase() === code);
+        if(exactMatches.length === 1){ applyMatchToRow(idx, exactMatches[0]); return; }
+        if(exactMatches.length > 1){ showMatchesList(idx, exactMatches); return; }
+        if(res.matches.length === 1){ applyMatchToRow(idx, res.matches[0]); return; }
+        showMatchesList(idx, res.matches);
+      }finally{
+        done();
+      }
+    });
   });
 }
 function showMatchesList(idx, matches){
@@ -1281,7 +1350,7 @@ function addNarcKitRow(){
   tr.className = 'narcKitRow';
   tr.id = 'narcKitRow-' + idx;
   tr.innerHTML =
-    '<td data-label="Scan / Lot # / Name"><div class="scanWrap"><input id="nscan-'+idx+'" placeholder="Scan barcode / lot / name" /><button id="nsearch-'+idx+'" class="btn small secondary">🔍</button><button id="ncam-'+idx+'" class="cameraBtn">📷</button></div><div id="nmatch-'+idx+'"></div></td>' +
+    '<td data-label="Scan / Lot # / Name"><div class="scanWrap"><input id="nscan-'+idx+'" placeholder="Scan barcode / lot / name" /><button id="nsearch-'+idx+'" class="btn small secondary searchActionBtn">🔍</button><button id="ncam-'+idx+'" class="cameraBtn">📷</button></div><div id="nmatch-'+idx+'"></div></td>' +
     '<td data-label="Narc Name"><select id="nname-'+idx+'"></select></td>' +
     '<td data-label="Lot"><input id="nlot-'+idx+'"/></td>' +
     '<td data-label="Expiration"><input id="nexp-'+idx+'" type="date"/></td>' +
@@ -1313,24 +1382,31 @@ function openNarcKitScanner(idx){
   startScannerHtml5('narcRowScannerBox-'+idx, 'nscan-'+idx, 'narcRowScannerContainer-'+idx, 'narcRowScannerStatus-'+idx, 'narcRowScannerClose-'+idx);
 }
 function narcKitLookup(idx){
+  const btn = $('nsearch-'+idx);
   const input = $('nscan-'+idx);
   const q = (input.value || '').trim();
   if(!q){ alert('Type or scan something first'); return; }
 
   const loc = $('narcLocation').value || 'Bronxcare';
-  jsonpCall('searchNarcStock', { q, location: loc }, function(res){
-    const holder = $('nmatch-'+idx);
-    if(holder) holder.innerHTML = '';
-    if(!res || !res.found || !res.matches || res.matches.length === 0){
-      showNarcKitInline(idx, q);
-      return;
-    }
-    const code = q.toLowerCase();
-    const exact = res.matches.filter(m => String(m.barcode || '').trim().toLowerCase() === code);
-    if(exact.length === 1){ applyNarcKitMatch(idx, exact[0]); return; }
-    if(exact.length > 1){ showNarcKitMatches(idx, exact); return; }
-    if(res.matches.length === 1){ applyNarcKitMatch(idx, res.matches[0]); return; }
-    showNarcKitMatches(idx, res.matches);
+  withSearchBusy(btn, (done) => {
+    jsonpCall('searchNarcStock', { q, location: loc }, function(res){
+      try{
+        const holder = $('nmatch-'+idx);
+        if(holder) holder.innerHTML = '';
+        if(!res || !res.found || !res.matches || res.matches.length === 0){
+          showNarcKitInline(idx, q);
+          return;
+        }
+        const code = q.toLowerCase();
+        const exact = res.matches.filter(m => String(m.barcode || '').trim().toLowerCase() === code);
+        if(exact.length === 1){ applyNarcKitMatch(idx, exact[0]); return; }
+        if(exact.length > 1){ showNarcKitMatches(idx, exact); return; }
+        if(res.matches.length === 1){ applyNarcKitMatch(idx, res.matches[0]); return; }
+        showNarcKitMatches(idx, res.matches);
+      }finally{
+        done();
+      }
+    });
   });
 }
 function showNarcKitMatches(idx, matches){
@@ -1484,6 +1560,7 @@ window.onload = function(){
   $('createCategory').addEventListener('change', ()=> populateReqDatalist($('createCategory').value || ''));
   $('resetRows').addEventListener('click', initRestockRows);
   $('submitAll').addEventListener('click', submitAll);
+  $('equipmentSearchBtn').classList.add('searchActionBtn');
   $('equipmentSearchBtn').addEventListener('click', searchEquipmentClient);
   $('equipmentSave').addEventListener('click', saveEquipmentClient);
   $('equipmentClear').addEventListener('click', clearEquipmentForm);
