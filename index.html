@@ -680,25 +680,27 @@ function renderDashboardKits(){
   const selectedKit = $('dashboardNarcKitSelect').value;
   const body = $('dashboardBody');
   const head = $('dashboardHead').querySelector('tr');
-  head.innerHTML = '<th>Narc Name</th><th>Lot Number</th><th>Expiration Date</th><th>Quantity</th><th>Status</th>';
-  body.innerHTML = '<tr><td colspan="5" class="small">Select a kit</td></tr>';
+  head.innerHTML = '<th>Row #</th><th>Narc Name</th><th>Lot Number</th><th>Expiration Date</th><th>Quantity</th><th>Status</th>';
+  body.innerHTML = '<tr><td colspan="6" class="small">Select a kit</td></tr>';
   if(!selectedKit) return;
   jsonpCall('getNarcKitContents', { kitId: selectedKit }, function(results){
     body.innerHTML = '';
     if(!results || !results.length){
-      body.innerHTML = '<tr><td colspan="5" class="small">No kit data</td></tr>';
+      body.innerHTML = '<tr><td colspan="6" class="small">No kit data</td></tr>';
       return;
     }
+    let rowNo = 1;
     results.forEach(r=>{
       if(!r.items || !r.items.length){
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td>'+esc(r.name||'')+'</td><td></td><td></td><td></td><td></td>';
+        tr.innerHTML = '<td>'+esc(rowNo++)+'</td><td>'+esc(r.name||'')+'</td><td></td><td></td><td></td><td></td>';
         body.appendChild(tr);
         return;
       }
       r.items.forEach(it=>{
         const tr = document.createElement('tr');
         tr.innerHTML =
+          '<td>'+esc(rowNo++)+'</td>' +
           '<td>'+esc(it.name || '')+'</td>' +
           '<td>'+esc(it.lot || '')+'</td>' +
           '<td>'+esc(formatDateMMDDYYYY(it.exp))+'</td>' +
@@ -1499,6 +1501,7 @@ function collectNarcKitEntries(){
 
   const rows = Array.from(document.querySelectorAll('tr.narcKitRow'));
   const entries = [];
+  let rowNo = 1;
   const loc = $('narcLocation').value || 'Bronxcare';
 
   rows.forEach((r, i) => {
@@ -1519,6 +1522,8 @@ function collectNarcKitEntries(){
         entries.push({
           kitId,
           location: loc,
+          rowNo: rowNo++,
+          sourceRow: idx,
           name,
           barcode,
           lot,
